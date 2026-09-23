@@ -1,0 +1,2084 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TGRAPP</title>
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="icon" type="image/png" href="./icon-192.png">
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="TGRAPP">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f6f5f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121317" media="(prefers-color-scheme: dark)">
+<style>
+  :root {
+    --bg: #f6f5f2;
+    --bg-elevated: #ffffff;
+    --sidebar-bg: #1c1e22;
+    --sidebar-text: #c7c9cd;
+    --sidebar-text-dim: #7c7f86;
+    --sidebar-active: #2a2d33;
+    --sidebar-hover: #242629;
+    --text: #1a1b1e;
+    --text-dim: #6b6d72;
+    --accent: #1d40c4;
+    --accent-soft: #e8edfe;
+    --border: #e4e2dd;
+    --danger: #d64545;
+    --popover-bg: #26282d;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121317; --bg-elevated: #191b20; --sidebar-bg: #0e0f12;
+      --sidebar-text: #c7c9cd; --sidebar-text-dim: #64666c; --sidebar-active: #1e2127;
+      --sidebar-hover: #191b20;
+      --text: #eceef1; --text-dim: #8b8d93; --accent: #3f5fd6; --accent-soft: #1c2338;
+      --border: #24262c; --danger: #ef6a6a; --popover-bg: #24262c; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121317; --bg-elevated: #191b20; --sidebar-bg: #0e0f12;
+    --sidebar-text: #c7c9cd; --sidebar-text-dim: #64666c; --sidebar-active: #1e2127;
+    --sidebar-hover: #191b20;
+    --text: #eceef1; --text-dim: #8b8d93; --accent: #3f5fd6; --accent-soft: #1c2338;
+    --border: #24262c; --danger: #ef6a6a; --popover-bg: #24262c; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    display: flex; overflow: hidden;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* ---------- sidebar ---------- */
+  #sidebar {
+    width: 250px; min-width: 250px; background: var(--sidebar-bg);
+    display: flex; flex-direction: column;
+    transition: width 0.18s ease, min-width 0.18s ease, padding 0.18s ease;
+    overflow: hidden; padding-top: env(safe-area-inset-top, 0px);
+  }
+  #sidebar.collapsed { width: 0; min-width: 0; padding: 0; }
+  #sidebar-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 10px 10px 14px; flex-shrink: 0; gap: 4px;
+  }
+  #sidebar-title {
+    font-size: 12px; font-weight: 600; color: var(--sidebar-text-dim);
+    letter-spacing: 0.04em; white-space: nowrap;
+  }
+  .header-btns { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+  .icon-btn {
+    background: none; border: none; color: var(--sidebar-text-dim); cursor: pointer;
+    width: 26px; height: 26px; border-radius: 7px; display: flex;
+    align-items: center; justify-content: center; flex-shrink: 0;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .icon-btn:hover { background: var(--sidebar-active); color: var(--sidebar-text); }
+  #sidebar-list { flex: 1; padding: 2px 6px; overflow-y: auto; }
+
+  .tree-row {
+    display: flex; align-items: center; gap: 4px; padding: 6px 6px;
+    border-radius: 7px; color: var(--sidebar-text); font-size: 13.5px;
+    cursor: pointer; white-space: nowrap; user-select: none; position: relative;
+  }
+  .tree-row.active { background: var(--sidebar-active); color: #fff; }
+  .tree-row:not(.active):hover { background: var(--sidebar-hover); }
+  .tree-row:not(.active):hover .row-actions { opacity: 1; }
+  .tree-row.dragging { opacity: 0.35; }
+  .tree-row.drop-before { box-shadow: inset 0 2px 0 0 var(--accent); }
+  .tree-row.drop-after { box-shadow: inset 0 -2px 0 0 var(--accent); }
+
+  .chevron {
+    width: 14px; height: 14px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--sidebar-text-dim); transition: transform 0.14s ease;
+  }
+  .chevron.expanded { transform: rotate(90deg); }
+  .chevron.spacer { visibility: hidden; }
+
+  .row-icon { font-size: 14px; flex-shrink: 0; width: 17px; text-align: center; cursor: pointer; }
+  .row-name { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+  .row-actions { display: flex; align-items: center; gap: 0; opacity: 0; flex-shrink: 0; transition: opacity 0.12s ease; }
+  .row-actions button {
+    background: none; border: none; color: var(--sidebar-text-dim); cursor: pointer;
+    width: 20px; height: 20px; border-radius: 5px; display: flex; align-items: center; justify-content: center;
+  }
+  .row-actions button:hover { background: rgba(255,255,255,0.12); color: #fff; }
+  .row-actions .del-action:hover { color: var(--danger); }
+
+  .tree-children { display: flex; flex-direction: column; }
+
+  .inline-form-row {
+    display: flex; align-items: center; gap: 5px; padding: 4px 6px;
+  }
+  .inline-form-row input {
+    background: var(--sidebar-hover); border: 1px solid var(--sidebar-active); border-radius: 6px;
+    color: #fff; font-size: 13px; padding: 5px 7px; outline: none; min-width: 0;
+  }
+  .inline-form-row input:focus { border-color: var(--accent); }
+  .inline-form-row .fname { flex: 1; }
+  .inline-form-row .ficon { width: 34px; text-align: center; flex-shrink: 0; }
+  .inline-form-row .fok {
+    background: var(--accent); border: none; color: #fff; border-radius: 6px;
+    width: 22px; height: 22px; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+
+  /* icon popover */
+  #icon-popover {
+    position: fixed; z-index: 1000; background: var(--popover-bg);
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px;
+    display: none; grid-template-columns: repeat(6, 1fr); gap: 2px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35); width: 192px; max-height: 260px; overflow-y: auto;
+  }
+  #icon-popover.open { display: grid; }
+  #icon-popover button {
+    background: none; border: none; font-size: 17px; cursor: pointer; color: #c7c9cd;
+    width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  }
+  #icon-popover button:hover { background: rgba(255,255,255,0.12); }
+
+  /* ---------- main ---------- */
+  #main { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--bg); }
+  #topbar {
+    display: flex; align-items: center; gap: 10px; padding: 14px 20px;
+    flex-shrink: 0; border-bottom: 1px solid var(--border); min-width: 0;
+  }
+  #breadcrumbs {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
+    font-size: 15px; color: var(--text-dim); min-width: 0;
+  }
+  .crumb {
+    cursor: pointer; padding: 3px 6px; border-radius: 6px; white-space: nowrap;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .crumb:hover { background: var(--accent-soft); color: var(--accent); }
+  .crumb.current { color: var(--text); font-weight: 600; cursor: default; }
+  .crumb.current:hover { background: none; color: var(--text); }
+  .crumb-sep { color: var(--text-dim); opacity: 0.5; font-size: 12px; }
+
+  #sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
+  #sync-dot.ok { background: #33c27a; }
+  #sync-dot.off { background: var(--danger); }
+  #sync-dot.pending { background: #e0a23e; }
+  #sync-dot.offline { background: #8b8d93; }
+  #sync-btn { color: var(--text-dim); gap: 7px; width: auto; padding: 0 6px; }
+  #sync-btn:hover { background: var(--accent-soft); color: var(--accent); }
+
+  #sync-modal { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.45); display: none;
+    align-items: center; justify-content: center; padding: 20px; }
+  #sync-modal.open { display: flex; }
+  #sync-card { background: var(--bg-elevated); color: var(--text); border: 1px solid var(--border); border-radius: 14px;
+    width: 100%; max-width: 380px; padding: 20px; display: flex; flex-direction: column; gap: 12px;
+    max-height: 100%; overflow-y: auto; }
+  #sync-card h2 { margin: 0; font-size: 17px; }
+  #sync-card label { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; color: var(--text-dim); }
+  #sync-card input { background: var(--bg); border: 1px solid var(--border); border-radius: 9px; padding: 10px 12px;
+    font-size: 16px; color: var(--text); outline: none; font-family: inherit; }
+  #sync-card input:focus { border-color: var(--accent); }
+  #sync-status { font-size: 13px; color: var(--text-dim); }
+  #sync-status.error { color: var(--danger); }
+  .sync-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .sync-actions button { border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 9px;
+    padding: 9px 14px; font-size: 14px; cursor: pointer; font-family: inherit; }
+  .sync-actions button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .sync-actions button.danger { color: var(--danger); }
+
+  #content { flex: 1; overflow-y: auto; padding: 24px 20px 40px; display: flex; justify-content: center; }
+  .page-wrap { width: 100%; max-width: 560px; }
+
+  #weight-add-row { display: flex; gap: 8px; margin-bottom: 22px; }
+  #weight-input {
+    flex: 1; background: var(--bg-elevated); border: 1px solid var(--border);
+    border-radius: 10px; padding: 11px 14px; font-size: 14.5px; color: var(--text);
+    outline: none; font-family: inherit; min-width: 0;
+  }
+  #weight-input:focus { border-color: var(--accent); }
+  #weight-input::-webkit-outer-spin-button,
+  #weight-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  #weight-input[type="number"] { -moz-appearance: textfield; }
+  #weight-add-btn {
+    background: var(--accent); color: #fff; border: none; border-radius: 10px;
+    padding: 0 18px; font-size: 14px; font-weight: 600; cursor: pointer; flex-shrink: 0;
+  }
+  #weight-chart-wrap {
+    background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px; margin-bottom: 20px; overflow-x: auto;
+  }
+  #weight-chart-wrap svg { display: block; width: 100%; height: auto; }
+  #weight-table-wrap {
+    background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px;
+    overflow: hidden;
+  }
+  .w-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; font-size: 14px; border-bottom: 1px solid var(--border);
+  }
+  .w-row:last-child { border-bottom: none; }
+  .w-row .w-date { color: var(--text-dim); font-size: 13px; }
+  .w-row .w-value { font-weight: 600; }
+  .w-row .w-del {
+    background: none; border: none; color: var(--text-dim); cursor: pointer; opacity: 0;
+    width: 22px; height: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    transition: opacity 0.12s ease, color 0.12s ease, background 0.12s ease;
+  }
+  .w-row:hover .w-del { opacity: 1; }
+  .w-row .w-del:hover { color: var(--danger); background: var(--accent-soft); }
+
+  /* ---------- gym page ---------- */
+  .tab-row { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; }
+  .tab-btn {
+    background: var(--bg-elevated); border: 1px solid var(--border); color: var(--text-dim);
+    border-radius: 999px; padding: 7px 16px; font-size: 13.5px; font-weight: 600; cursor: pointer;
+  }
+  .tab-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .tab-btn:not(.active):hover { border-color: var(--accent); color: var(--accent); }
+
+  .gym-toolbar { display: flex; gap: 8px; margin-bottom: 16px; }
+
+  .gym-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-elevated); margin-bottom: 20px; }
+  table.gym-table { border-collapse: collapse; width: 100%; min-width: 560px; }
+  table.gym-table th, table.gym-table td {
+    border-bottom: 1px solid var(--border); border-right: 1px solid var(--border);
+    padding: 8px 10px; font-size: 12.5px; text-align: center; white-space: nowrap;
+  }
+  table.gym-table th:last-child, table.gym-table td:last-child { border-right: none; }
+  table.gym-table th {
+    background: var(--sidebar-active); color: var(--text); font-weight: 600; position: relative;
+  }
+  table.gym-table th .ex-name { font-size: 12.5px; }
+  table.gym-table th .ex-scheme { font-size: 10.5px; color: var(--text-dim); font-weight: 500; }
+  table.gym-table th .ex-del {
+    position: absolute; top: 2px; right: 2px; background: none; border: none; color: var(--text-dim);
+    cursor: pointer; width: 16px; height: 16px; opacity: 0; border-radius: 4px;
+  }
+  table.gym-table th:hover .ex-del { opacity: 1; }
+  table.gym-table th .ex-del:hover { color: var(--danger); }
+  table.gym-table td { cursor: text; color: var(--text); }
+  table.gym-table td input {
+    width: 100%; border: none; background: none; text-align: center; font-size: 12.5px;
+    color: var(--text); outline: none; font-family: inherit;
+  }
+  table.gym-table td.date-cell { color: var(--text-dim); font-size: 11.5px; white-space: nowrap; text-align: left; }
+
+  .ex-add-form { display: flex; gap: 6px; align-items: center; }
+  .ex-add-form input { padding: 8px 10px; font-size: 13px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-elevated); color: var(--text); outline: none; }
+  .ex-add-form input:focus { border-color: var(--accent); }
+  .ex-add-form .ex-name-inp { flex: 1; min-width: 0; }
+  .ex-add-form .ex-scheme-inp { width: 90px; flex-shrink: 0; }
+
+  .progress-ex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+  .progress-ex-tile {
+    background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px; cursor: pointer; position: relative; font-size: 14px; font-weight: 600;
+  }
+  .progress-ex-tile:hover { border-color: var(--accent); }
+  .progress-ex-tile .pex-del {
+    position: absolute; top: 6px; right: 6px; background: none; border: none; color: var(--text-dim);
+    cursor: pointer; opacity: 0; width: 20px; height: 20px; border-radius: 5px;
+  }
+  .progress-ex-tile:hover .pex-del { opacity: 1; }
+  .progress-ex-tile .pex-del:hover { color: var(--danger); }
+  .back-link { display: inline-flex; align-items: center; gap: 5px; color: var(--text-dim); font-size: 13.5px; cursor: pointer; margin-bottom: 16px; }
+  .back-link:hover { color: var(--accent); }
+
+  #add-row { display: flex; gap: 8px; margin-bottom: 20px; }
+  #add-input {
+    flex: 1; background: var(--bg-elevated); border: 1px solid var(--border);
+    border-radius: 10px; padding: 11px 14px; font-size: 14.5px; color: var(--text);
+    outline: none; font-family: inherit; min-width: 0;
+  }
+  #add-input:focus { border-color: var(--accent); }
+  #add-btn {
+    background: var(--accent); color: #fff; border: none; border-radius: 10px;
+    padding: 0 18px; font-size: 14px; font-weight: 600; cursor: pointer; flex-shrink: 0;
+  }
+  #add-btn:active { transform: scale(0.97); }
+
+  #task-list { display: flex; flex-direction: column; gap: 6px; }
+  .task {
+    display: flex; align-items: flex-start; gap: 11px; padding: 11px 12px;
+    border-radius: 10px; background: var(--bg-elevated); border: 1px solid var(--border);
+  }
+  .check {
+    width: 19px; height: 19px; border-radius: 6px; border: 1.6px solid var(--text-dim);
+    flex-shrink: 0; margin-top: 1px; cursor: pointer; display: flex;
+    align-items: center; justify-content: center;
+    transition: background 0.12s ease, border-color 0.12s ease;
+  }
+  .check.done { background: var(--accent); border-color: var(--accent); }
+  .check svg { display: none; width: 12px; height: 12px; stroke: white; }
+  .check.done svg { display: block; }
+  .task-text { flex: 1; font-size: 14.5px; line-height: 1.4; word-break: break-word; padding-top: 1px; }
+  .task.done .task-text { color: var(--text-dim); text-decoration: line-through; }
+  .task.done { background: rgba(51,194,122,0.06); border-color: rgba(51,194,122,0.25); }
+  .task.dragging { opacity: 0.35; }
+  .task.drop-before { box-shadow: inset 0 2px 0 0 var(--accent); }
+  .task.drop-after { box-shadow: inset 0 -2px 0 0 var(--accent); }
+  #done-divider { border-top: 1px solid var(--border); margin: 10px 2px; }
+  .del-btn {
+    background: none; border: none; color: var(--text-dim); cursor: pointer; opacity: 0;
+    width: 24px; height: 24px; flex-shrink: 0; border-radius: 6px; display: flex;
+    align-items: center; justify-content: center;
+    transition: opacity 0.12s ease, color 0.12s ease, background 0.12s ease;
+  }
+  .task:hover .del-btn { opacity: 1; }
+  .del-btn:hover { color: var(--danger); background: var(--accent-soft); }
+
+  .prio-badge {
+    flex-shrink: 0; width: 26px; height: 19px; border-radius: 6px; margin-top: 1px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    font-weight: 700; font-family: -apple-system, sans-serif;
+    border: 1px solid transparent;
+  }
+  #prio-popover {
+    position: fixed; z-index: 1000; background: var(--popover-bg);
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 6px;
+    display: none; flex-direction: column; gap: 1px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35); width: 160px;
+  }
+  #prio-popover.open { display: flex; }
+  #prio-popover button {
+    background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 8px;
+    padding: 7px 8px; border-radius: 6px; color: #e8e8ea; font-size: 13px; text-align: left;
+  }
+  #prio-popover button:hover { background: rgba(255,255,255,0.1); }
+  #prio-popover .swatch {
+    width: 22px; height: 17px; border-radius: 5px; display: flex; align-items: center;
+    justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0;
+  }
+
+  .task-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .task-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+  .task-toggle {
+    background: none; border: none; color: var(--text-dim); cursor: pointer;
+    display: flex; align-items: center; gap: 3px; font-size: 11.5px; flex-shrink: 0;
+    padding: 2px 5px; border-radius: 6px; margin-top: 1px;
+  }
+  .task-toggle:hover { background: var(--accent-soft); color: var(--accent); }
+  .task-toggle svg { transition: transform 0.14s ease; }
+  .task-toggle.open svg { transform: rotate(90deg); }
+
+  .task-detail { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
+  .subtask-list { display: flex; flex-direction: column; gap: 4px; }
+  .subtask-row { display: flex; align-items: center; gap: 8px; }
+  .subtask-check {
+    width: 15px; height: 15px; border-radius: 5px; border: 1.4px solid var(--text-dim);
+    flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .subtask-check.done { background: var(--accent); border-color: var(--accent); }
+  .subtask-check svg { display: none; width: 9px; height: 9px; stroke: white; }
+  .subtask-check.done svg { display: block; }
+  .subtask-text { flex: 1; font-size: 13px; }
+  .subtask-row.done .subtask-text { color: var(--text-dim); text-decoration: line-through; }
+  .subtask-del {
+    background: none; border: none; color: var(--text-dim); cursor: pointer; opacity: 0;
+    width: 20px; height: 20px; border-radius: 5px; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: opacity 0.12s ease;
+  }
+  .subtask-row:hover .subtask-del { opacity: 1; }
+  .subtask-del:hover { color: var(--danger); }
+  .subtask-add-row { display: flex; gap: 6px; }
+  .subtask-add-row input {
+    flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
+    padding: 6px 9px; font-size: 13px; color: var(--text); outline: none; font-family: inherit;
+  }
+  .subtask-add-row input:focus { border-color: var(--accent); }
+  .note-area {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; font-size: 13px; color: var(--text); outline: none; font-family: inherit;
+    resize: vertical; min-height: 50px;
+  }
+  .note-area:focus { border-color: var(--accent); }
+  .detail-label { font-size: 10.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+  .meta-created { font-size: 11px; color: var(--text-dim); opacity: 0.75; }
+  .deadline-chip {
+    display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px;
+    padding: 2px 7px 2px 6px; border-radius: 6px; cursor: pointer;
+    background: var(--accent-soft); color: var(--accent); border: 1px solid transparent;
+  }
+  .deadline-chip.overdue { background: rgba(214,69,69,0.12); color: var(--danger); }
+  .deadline-chip.empty { background: transparent; color: var(--text-dim); border: 1px dashed var(--border); }
+  .deadline-chip svg { flex-shrink: 0; }
+
+  #date-popover {
+    position: fixed; z-index: 1000; background: var(--popover-bg);
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 10px;
+    display: none; flex-direction: column; gap: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  }
+  #date-popover.open { display: flex; }
+  #date-popover input[type="date"] {
+    background: var(--sidebar-hover); border: 1px solid var(--sidebar-active); border-radius: 6px;
+    color: #fff; font-size: 13px; padding: 6px 8px; outline: none; color-scheme: dark;
+  }
+  #date-popover .clear-deadline {
+    background: none; border: none; color: #c7c9cd; font-size: 12.5px; cursor: pointer;
+    text-align: left; padding: 4px 2px; border-radius: 5px;
+  }
+  #date-popover .clear-deadline:hover { background: rgba(255,255,255,0.08); }
+
+  #empty-state { text-align: center; color: var(--text-dim); font-size: 14px; padding: 40px 20px; }
+
+  #open-sidebar-btn { display: none; }
+  #sidebar.collapsed ~ #main #open-sidebar-btn { display: flex; }
+
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  @media (max-width: 640px) {
+    #sidebar:not(.collapsed) { width: 100%; min-width: 100%; }
+    #sidebar:not(.collapsed) ~ #main { display: none; }
+  }
+</style>
+</head>
+<body>
+
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <span id="sidebar-title">MY PAGES</span>
+      <div class="header-btns">
+        <button class="icon-btn" id="root-add-btn" title="New folder">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+        <button class="icon-btn" id="collapse-btn" title="Collapse panel">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L6 8L10 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="sidebar-list"></div>
+  </div>
+
+
+  <div id="sync-modal">
+    <div id="sync-card">
+      <h2>Sync with GitHub</h2>
+      <div id="sync-status"></div>
+      <label>GitHub username<input id="sc-owner" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="tamerlan"></label>
+      <label>Private data repo<input id="sc-repo" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="tgrapp-data"></label>
+      <label>File in the repo<input id="sc-path" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="data.json"></label>
+      <label>Access token<input id="sc-token" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_..."></label>
+      <div class="sync-actions">
+        <button class="primary" id="sc-save">Save and sync</button>
+        <button id="sc-now">Sync now</button>
+        <button id="sc-export">Export backup</button>
+        <button class="danger" id="sc-off">Disconnect</button>
+        <button id="sc-close">Close</button>
+      </div>
+    </div>
+  </div>
+  <div id="icon-popover"></div>
+  <div id="prio-popover"></div>
+  <div id="date-popover"></div>
+
+  <div id="main">
+    <div id="topbar">
+      <button class="icon-btn" id="open-sidebar-btn" title="Expand panel">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 3L10 8L6 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div id="breadcrumbs"></div>
+      <div style="flex:1"></div>
+      <button class="icon-btn" id="sync-btn" title="Sync settings">
+        <span id="sync-dot"></span>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18H17.5C19.4 18 21 16.4 21 14.5C21 12.6 19.4 11 17.5 11C17.2 7.6 14.9 5 11.8 5C9 5 6.7 7 6.2 9.7C4.3 10.1 3 11.8 3 13.8C3 16.1 4.8 18 7 18Z"/></svg>
+      </button>
+    </div>
+    <div id="content">
+      <div id="page-todo" class="page-wrap">
+        <div id="add-row">
+          <input id="add-input" type="text" placeholder="new task..." autocomplete="off">
+          <button id="add-btn">Add</button>
+        </div>
+        <div id="task-list"></div>
+        <div id="empty-state" style="display:none">nothing here yet</div>
+      </div>
+      <div id="page-weight" class="page-wrap" style="display:none">
+        <div id="weight-add-row">
+          <input id="weight-input" type="number" step="0.1" inputmode="decimal" placeholder="weight, kg...">
+          <button id="weight-add-btn">Add</button>
+        </div>
+        <div id="weight-chart-wrap"></div>
+        <div id="weight-table-wrap"></div>
+        <div id="weight-empty" style="display:none">no weight entries yet</div>
+      </div>
+      <div id="page-gym" class="page-wrap" style="display:none">
+        <div id="gym-body"></div>
+      </div>
+    </div>
+  </div>
+
+<script src="./sync-db.js"></script>
+<script>
+  const ICON_DEFS = {
+    folder: '<path d="M3 6.5C3 5.67 3.67 5 4.5 5H9L11 7H19.5C20.33 7 21 7.67 21 8.5V17.5C21 18.33 20.33 19 19.5 19H4.5C3.67 19 3 18.33 3 17.5V6.5Z"/>',
+    star: '<path d="M12 3L14.5 9.2L21 9.8L16 14.1L17.5 20.5L12 17L6.5 20.5L8 14.1L3 9.8L9.5 9.2L12 3Z"/>',
+    flag: '<path d="M5 21V4"/><path d="M5 4H17L14.5 8L17 12H5"/>',
+    bell: '<path d="M6 10C6 6.7 8.7 4 12 4C15.3 4 18 6.7 18 10V14L20 17H4L6 14V10Z"/><path d="M10 20C10.3 20.6 11.1 21 12 21C12.9 21 13.7 20.6 14 20"/>',
+    bolt: '<path d="M13 2L4 14H11L10 22L20 9H13L13 2Z"/>',
+    heart: '<path d="M12 20C12 20 4 15 4 9.5C4 6.9 6 5 8.5 5C10 5 11.3 5.8 12 7C12.7 5.8 14 5 15.5 5C18 5 20 6.9 20 9.5C20 15 12 20 12 20Z"/>',
+    bookmark: '<path d="M6 3H18V21L12 17L6 21V3Z"/>',
+    tag: '<path d="M11 3H4V10L14 20L21 13L11 3Z"/><circle cx="7.5" cy="7.5" r="1"/>',
+    briefcase: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5C8 3.9 8.9 3 10 3H14C15.1 3 16 3.9 16 5V7"/>',
+    book: '<path d="M4 4.5C4 3.7 4.7 3 5.5 3H19V19H5.5C4.7 19 4 19.7 4 20.5V4.5Z"/><path d="M4 19H19"/>',
+    code: '<path d="M9 8L4 12L9 16"/><path d="M15 8L20 12L15 16"/>',
+    chart: '<path d="M4 20V4"/><path d="M4 20H20"/><rect x="7" y="13" width="3" height="7"/><rect x="12" y="9" width="3" height="11"/><rect x="17" y="5" width="3" height="15"/>',
+    calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9H21"/><path d="M8 3V6"/><path d="M16 3V6"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7V12L15.5 14.5"/>',
+    target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+    gift: '<path d="M3 9H21V13H3V9Z"/><path d="M4 13H20V20H4V13Z"/><path d="M12 9V20"/><path d="M12 9C12 9 8 9 8 6.5C8 5 9.3 4 10.5 4C12 4 12 6.5 12 9Z"/><path d="M12 9C12 9 16 9 16 6.5C16 5 14.7 4 13.5 4C12 4 12 6.5 12 9Z"/>',
+    home: '<path d="M4 11L12 4L20 11"/><path d="M6 10V20H18V10"/>',
+    wrench: '<path d="M14.7 6.3C15.9 5.1 17.7 4.9 19 5.8L16 8.8L18 10.8L21 7.8C21.9 9.1 21.7 10.9 20.5 12.1C19.2 13.4 17.3 13.7 15.8 12.9L8.6 20.1C7.9 20.8 6.7 20.8 6 20.1C5.3 19.4 5.3 18.2 6 17.5L13.2 10.3C12.4 8.8 12.7 6.9 14 5.6"/>',
+    gear: '<circle cx="12" cy="12" r="3.2"/><path d="M12 3V5.5M12 18.5V21M21 12H18.5M5.5 12H3M18.4 5.6L16.6 7.4M7.4 16.6L5.6 18.4M18.4 18.4L16.6 16.6M7.4 7.4L5.6 5.6"/>',
+    rocket: '<path d="M12 15C9 15 6 12 6 9C6 4 10 2 12 2C14 2 18 4 18 9C18 12 15 15 12 15Z"/><path d="M9 15L7 20L10 18"/><path d="M15 15L17 20L14 18"/><circle cx="12" cy="9" r="1.8"/>',
+    lightbulb: '<path d="M9 18H15"/><path d="M10 21H14"/><path d="M12 3C8.7 3 6 5.7 6 9C6 11.5 7.5 13 8.5 14C9 14.5 9.3 15.1 9.4 15.7L9.5 16H14.5L14.6 15.7C14.7 15.1 15 14.5 15.5 14C16.5 13 18 11.5 18 9C18 5.7 15.3 3 12 3Z"/>',
+    paperclip: '<path d="M8 12L15 5C16.4 3.6 18.6 3.6 20 5C21.4 6.4 21.4 8.6 20 10L11 19C9 21 6 21 4 19C2 17 2 14 4 12L13 3"/>',
+    camera: '<rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="12" cy="13.5" r="3.5"/><path d="M8 7L9.5 4H14.5L16 7"/>',
+    shield: '<path d="M12 3L19 6V11C19 16 16 19.5 12 21C8 19.5 5 16 5 11V6L12 3Z"/>',
+    pin: '<path d="M12 21C12 21 18 15 18 10C18 6.7 15.3 4 12 4C8.7 4 6 6.7 6 10C6 15 12 21 12 21Z"/><circle cx="12" cy="10" r="2.3"/>',
+    list: '<path d="M8 6H21"/><path d="M8 12H21"/><path d="M8 18H21"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
+    layers: '<path d="M12 3L21 8L12 13L3 8L12 3Z"/><path d="M3 13L12 18L21 13"/>',
+    money: '<circle cx="12" cy="12" r="9"/><path d="M9 9.5C9 8.1 10.3 7 12 7C13.7 7 15 8.1 15 9.5C15 12 9 11 9 14.5C9 15.9 10.3 17 12 17C13.7 17 15 15.9 15 14.5"/><path d="M12 5V7"/><path d="M12 17V19"/>'
+  };
+  const ICONS = Object.keys(ICON_DEFS);
+  function iconSVG(id, size) {
+    size = size || 15;
+    const inner = ICON_DEFS[id] || ICON_DEFS.folder;
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+  }
+
+  const PRIORITIES = [
+    { value: 2,  dir: 'up',   count: 2, label: 'Highest',    color: '#e03e3e' },
+    { value: 1,  dir: 'up',   count: 1, label: 'High',      color: '#e0823e' },
+    { value: 0,  dir: 'flat', count: 0, label: 'Medium',      color: '#8b8d93' },
+    { value: -1, dir: 'down', count: 1, label: 'Low',       color: '#3f8de0' },
+    { value: -2, dir: 'down', count: 2, label: 'Lowest', color: '#6b6dae' }
+  ];
+  function prioInfo(v) {
+    return PRIORITIES.find(p => p.value === v) || PRIORITIES[2];
+  }
+  function buildPrioGlyph(p) {
+    const wrap = document.createElement('div');
+    wrap.style.display = 'flex';
+    wrap.style.flexDirection = 'column';
+    wrap.style.alignItems = 'center';
+    wrap.style.justifyContent = 'center';
+    wrap.style.lineHeight = '1';
+    if (p.dir === 'flat') {
+      wrap.style.fontSize = '13px';
+      wrap.textContent = '–';
+      return wrap;
+    }
+    for (let i = 0; i < p.count; i++) {
+      const s = document.createElement('span');
+      s.textContent = p.dir === 'up' ? '˄' : '˅';
+      s.style.fontSize = '10px';
+      if (i > 0) s.style.marginTop = '-4px';
+      wrap.appendChild(s);
+    }
+    return wrap;
+  }
+  const prioPopover = document.getElementById('prio-popover');
+  function closePrioPopover() { prioPopover.classList.remove('open'); prioPopover.innerHTML = ''; }
+  function openPrioPopover(anchorEl, onPick) {
+    prioPopover.innerHTML = '';
+    PRIORITIES.forEach(p => {
+      const b = document.createElement('button');
+      const sw = document.createElement('span');
+      sw.className = 'swatch';
+      sw.style.background = p.color + '22';
+      sw.style.color = p.color;
+      sw.appendChild(buildPrioGlyph(p));
+      const lbl = document.createElement('span');
+      lbl.textContent = p.label;
+      b.appendChild(sw);
+      b.appendChild(lbl);
+      b.addEventListener('click', (e) => { e.stopPropagation(); onPick(p.value); closePrioPopover(); });
+      prioPopover.appendChild(b);
+    });
+    const rect = anchorEl.getBoundingClientRect();
+    prioPopover.style.top = Math.min(rect.bottom + 4, window.innerHeight - 200) + 'px';
+    prioPopover.style.left = Math.min(rect.left, window.innerWidth - 170) + 'px';
+    prioPopover.classList.add('open');
+  }
+  document.addEventListener('click', (e) => {
+    if (prioPopover.classList.contains('open') && !prioPopover.contains(e.target)) closePrioPopover();
+  });
+
+  function fmtDate(d) {
+    return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' });
+  }
+  function fmtCreated(ts) {
+    if (!ts) return '';
+    return 'added ' + fmtDate(new Date(ts));
+  }
+  function fmtDeadline(dstr) {
+    const [y, m, d] = dstr.split('-').map(Number);
+    return fmtDate(new Date(y, m - 1, d));
+  }
+  function isOverdue(dstr, done) {
+    if (!dstr || done) return false;
+    const [y, m, d] = dstr.split('-').map(Number);
+    const dl = new Date(y, m - 1, d, 23, 59, 59);
+    return dl.getTime() < Date.now();
+  }
+
+  const datePopover = document.getElementById('date-popover');
+  function closeDatePopover() { datePopover.classList.remove('open'); datePopover.innerHTML = ''; }
+  function openDatePopover(anchorEl, currentValue, onPick) {
+    datePopover.innerHTML = '';
+    const inp = document.createElement('input');
+    inp.type = 'date';
+    if (currentValue) inp.value = currentValue;
+    inp.addEventListener('change', () => { onPick(inp.value || null); closeDatePopover(); });
+    inp.addEventListener('click', (e) => e.stopPropagation());
+    datePopover.appendChild(inp);
+    if (currentValue) {
+      const clearBtn = document.createElement('button');
+      clearBtn.className = 'clear-deadline';
+      clearBtn.textContent = 'Remove deadline';
+      clearBtn.addEventListener('click', (e) => { e.stopPropagation(); onPick(null); closeDatePopover(); });
+      datePopover.appendChild(clearBtn);
+    }
+    const rect = anchorEl.getBoundingClientRect();
+    datePopover.style.top = Math.min(rect.bottom + 4, window.innerHeight - 140) + 'px';
+    datePopover.style.left = Math.min(rect.left, window.innerWidth - 220) + 'px';
+    datePopover.classList.add('open');
+    setTimeout(() => { try { inp.showPicker(); } catch (e) { inp.focus(); } }, 40);
+  }
+  document.addEventListener('click', (e) => {
+    if (datePopover.classList.contains('open') && !datePopover.contains(e.target)) closeDatePopover();
+  });
+
+  // ---------- sidebar collapse ----------
+  const sidebar = document.getElementById('sidebar');
+  const collapseBtn = document.getElementById('collapse-btn');
+  const openSidebarBtn = document.getElementById('open-sidebar-btn');
+  function setCollapsed(collapsed) {
+    sidebar.classList.toggle('collapsed', collapsed);
+    try { localStorage.setItem('sidebar_collapsed', collapsed ? '1' : '0'); } catch (e) {}
+  }
+  collapseBtn.addEventListener('click', () => setCollapsed(true));
+  openSidebarBtn.addEventListener('click', () => setCollapsed(false));
+  try { if (localStorage.getItem('sidebar_collapsed') === '1') setCollapsed(true); } catch (e) {}
+  function autoCollapseOnMobile() {
+    if (window.innerWidth <= 640) setCollapsed(true);
+  }
+
+  // ---------- state ----------
+  const listEl = document.getElementById('task-list');
+  const emptyEl = document.getElementById('empty-state');
+  const inputEl = document.getElementById('add-input');
+  const addBtn = document.getElementById('add-btn');
+  const syncDot = document.getElementById('sync-dot');
+  const sidebarListEl = document.getElementById('sidebar-list');
+  const breadcrumbsEl = document.getElementById('breadcrumbs');
+  const rootAddBtn = document.getElementById('root-add-btn');
+  const iconPopover = document.getElementById('icon-popover');
+
+  let tasksCol = null;
+  let foldersCol = null;
+  let subtasksCol = null;
+  let usingLocal = false;
+
+  let allTasks = [];
+  let allFolders = [];
+  let allSubtasks = [];
+  let expandedTasks = new Set();
+  let currentFolderId = null;
+  let currentPage = 'todo'; // 'todo' | 'weight'
+  let expanded = new Set();
+  let creatingUnderParent = undefined; // folderId (or null for root) currently showing inline create form, undefined = none
+
+  try {
+    const raw = localStorage.getItem('todo_expanded');
+    if (raw) expanded = new Set(JSON.parse(raw));
+    else expanded.add('__root__');
+  } catch (e) { expanded.add('__root__'); }
+  function saveExpanded() {
+    try { localStorage.setItem('todo_expanded', JSON.stringify([...expanded])); } catch (e) {}
+  }
+
+  function norm(id) { return id || null; }
+
+  // ---------- icon popover ----------
+  function closeIconPopover() { iconPopover.classList.remove('open'); iconPopover.innerHTML = ''; }
+  function openIconPopover(anchorEl, onPick) {
+    iconPopover.innerHTML = '';
+    ICONS.forEach(ic => {
+      const b = document.createElement('button');
+      b.innerHTML = iconSVG(ic, 17);
+      b.addEventListener('click', (e) => { e.stopPropagation(); onPick(ic); closeIconPopover(); });
+      iconPopover.appendChild(b);
+    });
+    const rect = anchorEl.getBoundingClientRect();
+    iconPopover.style.top = Math.min(rect.bottom + 4, window.innerHeight - 220) + 'px';
+    iconPopover.style.left = Math.min(rect.left, window.innerWidth - 200) + 'px';
+    iconPopover.classList.add('open');
+  }
+  document.addEventListener('click', (e) => {
+    if (iconPopover.classList.contains('open') && !iconPopover.contains(e.target)) closeIconPopover();
+  });
+
+  // ---------- tree render ----------
+  function sortKey(f) { return (f.order !== undefined && f.order !== null) ? f.order : (f.createdAt || 0); }
+  function childrenOf(parentId) {
+    return allFolders.filter(f => norm(f.parentId) === norm(parentId))
+      .sort((a, b) => sortKey(a) - sortKey(b));
+  }
+
+  let dragFolderId = null;
+
+  function reorderFolder(draggedId, targetId, before) {
+    const dragged = allFolders.find(f => f.id === draggedId);
+    const target = allFolders.find(f => f.id === targetId);
+    if (!dragged || !target) return;
+    if (norm(dragged.parentId) !== norm(target.parentId)) return;
+
+    const siblings = childrenOf(dragged.parentId).filter(f => f.id !== draggedId);
+    const idx = siblings.findIndex(f => f.id === targetId);
+    const insertAt = before ? idx : idx + 1;
+    siblings.splice(insertAt, 0, dragged);
+
+    siblings.forEach((f, i) => {
+      const newOrder = (i + 1) * 1000;
+      if (sortKey(f) !== newOrder) {
+        f.order = newOrder;
+        if (!usingLocal) foldersCol.doc(f.id).update({ order: newOrder }).catch(() => {});
+      }
+    });
+    if (usingLocal) saveLocal();
+    renderAll();
+  }
+
+  function buildInlineForm(parentId) {
+    const row = document.createElement('div');
+    row.className = 'inline-form-row';
+    let selectedIcon = 'folder';
+    const iconBtn = document.createElement('div');
+    iconBtn.className = 'ficon';
+    iconBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;cursor:pointer;color:#c7c9cd;';
+    iconBtn.innerHTML = iconSVG(selectedIcon, 16);
+    iconBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openIconPopover(iconBtn, (ic) => { selectedIcon = ic; iconBtn.innerHTML = iconSVG(selectedIcon, 16); });
+    });
+    const nameInput = document.createElement('input');
+    nameInput.className = 'fname';
+    nameInput.placeholder = 'name...';
+    const ok = document.createElement('button');
+    ok.className = 'fok';
+    ok.innerHTML = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.5L13 4.5" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    function confirm() {
+      const name = nameInput.value.trim();
+      if (!name) { creatingUnderParent = undefined; renderTree(); return; }
+      createFolder(parentId, name, selectedIcon);
+    }
+    ok.addEventListener('click', (e) => { e.stopPropagation(); confirm(); });
+    nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') confirm(); if (e.key === 'Escape') { creatingUnderParent = undefined; renderTree(); } });
+    row.appendChild(iconBtn);
+    row.appendChild(nameInput);
+    row.appendChild(ok);
+    setTimeout(() => nameInput.focus(), 30);
+    return row;
+  }
+
+  function buildFolderNode(folder, depth) {
+    const wrap = document.createElement('div');
+
+    const row = document.createElement('div');
+    row.className = 'tree-row' + (currentFolderId === folder.id ? ' active' : '');
+    row.style.paddingLeft = (6 + depth * 15) + 'px';
+
+    const kids = childrenOf(folder.id);
+    const isExpanded = expanded.has(folder.id);
+
+    const chevron = document.createElement('span');
+    chevron.className = 'chevron' + (isExpanded ? ' expanded' : '') + (kids.length ? '' : ' spacer');
+    chevron.innerHTML = '<svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M5 3L11 8L5 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    chevron.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!kids.length) return;
+      if (isExpanded) expanded.delete(folder.id); else expanded.add(folder.id);
+      saveExpanded();
+      renderTree();
+    });
+
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'row-icon';
+    iconSpan.innerHTML = iconSVG(folder.icon || 'folder', 15);
+    iconSpan.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openIconPopover(iconSpan, (ic) => updateFolderIcon(folder.id, ic));
+    });
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'row-name';
+    nameSpan.textContent = folder.name;
+
+    const actions = document.createElement('div');
+    actions.className = 'row-actions';
+    const addBtnEl = document.createElement('button');
+    addBtnEl.title = 'Add subfolder';
+    addBtnEl.innerHTML = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+    addBtnEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      expanded.add(folder.id); saveExpanded();
+      creatingUnderParent = folder.id;
+      renderTree();
+    });
+    const delBtnEl = document.createElement('button');
+    delBtnEl.className = 'del-action';
+    delBtnEl.title = 'Delete';
+    delBtnEl.innerHTML = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 4H13M6.5 4V2.7C6.5 2.3 6.8 2 7.2 2H8.8C9.2 2 9.5 2.3 9.5 2.7V4M5 4V12.5C5 13 5.4 13.4 5.9 13.4H10.1C10.6 13.4 11 13 11 12.5V4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    delBtnEl.addEventListener('click', (e) => { e.stopPropagation(); deleteFolder(folder.id); });
+    actions.appendChild(addBtnEl);
+    actions.appendChild(delBtnEl);
+
+    row.appendChild(chevron);
+    row.appendChild(iconSpan);
+    row.appendChild(nameSpan);
+    row.appendChild(actions);
+    row.addEventListener('click', () => navigateTo(folder.id));
+
+    row.draggable = true;
+    row.addEventListener('dragstart', (e) => {
+      dragFolderId = folder.id;
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', folder.id); } catch (err) {}
+      row.classList.add('dragging');
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      document.querySelectorAll('.drop-before,.drop-after').forEach(el => el.classList.remove('drop-before', 'drop-after'));
+      dragFolderId = null;
+    });
+    row.addEventListener('dragover', (e) => {
+      if (!dragFolderId || dragFolderId === folder.id) return;
+      const dragged = allFolders.find(f => f.id === dragFolderId);
+      if (!dragged || norm(dragged.parentId) !== norm(folder.parentId)) return;
+      e.preventDefault();
+      const rect = row.getBoundingClientRect();
+      const before = (e.clientY - rect.top) < rect.height / 2;
+      row.classList.toggle('drop-before', before);
+      row.classList.toggle('drop-after', !before);
+    });
+    row.addEventListener('dragleave', () => {
+      row.classList.remove('drop-before', 'drop-after');
+    });
+    row.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const before = row.classList.contains('drop-before');
+      row.classList.remove('drop-before', 'drop-after');
+      if (!dragFolderId || dragFolderId === folder.id) return;
+      reorderFolder(dragFolderId, folder.id, before);
+      dragFolderId = null;
+    });
+
+    wrap.appendChild(row);
+
+    if (isExpanded) {
+      const childrenWrap = document.createElement('div');
+      childrenWrap.className = 'tree-children';
+      kids.forEach(k => childrenWrap.appendChild(buildFolderNode(k, depth + 1)));
+      if (creatingUnderParent === folder.id) {
+        const formRow = buildInlineForm(folder.id);
+        formRow.style.paddingLeft = (6 + (depth + 1) * 15) + 'px';
+        childrenWrap.appendChild(formRow);
+      }
+      wrap.appendChild(childrenWrap);
+    }
+    return wrap;
+  }
+
+  function renderTree() {
+    sidebarListEl.innerHTML = '';
+
+    const rootChildren = childrenOf(null);
+    const rootExpanded = expanded.has('__root__');
+
+    const todoRow = document.createElement('div');
+    todoRow.className = 'tree-row' + (currentFolderId === null ? ' active' : '');
+    todoRow.style.paddingLeft = '6px';
+
+    const todoIcon = document.createElement('span');
+    todoIcon.className = 'row-icon';
+    todoIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="vertical-align:-2px"><rect x="2" y="2" width="12" height="12" rx="3" stroke="currentColor" stroke-width="1.4"/><path d="M5.2 8L7.2 10L10.8 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    const todoName = document.createElement('span');
+    todoName.className = 'row-name';
+    todoName.style.fontWeight = '700';
+    todoName.textContent = 'ToDo';
+    todoRow.appendChild(todoIcon);
+    todoRow.appendChild(todoName);
+    todoRow.addEventListener('click', () => {
+      if (rootChildren.length) {
+        if (rootExpanded) expanded.delete('__root__'); else expanded.add('__root__');
+        saveExpanded();
+      }
+      navigateTo(null);
+    });
+    sidebarListEl.appendChild(todoRow);
+
+    if (rootExpanded) {
+      rootChildren.forEach(f => sidebarListEl.appendChild(buildFolderNode(f, 1)));
+      if (creatingUnderParent === null) {
+        const formRow = buildInlineForm(null);
+        formRow.style.paddingLeft = '21px';
+        sidebarListEl.appendChild(formRow);
+      }
+    }
+
+    const weightRow = document.createElement('div');
+    weightRow.className = 'tree-row' + (currentPage === 'weight' ? ' active' : '');
+    weightRow.style.paddingLeft = '6px';
+    const weightIcon = document.createElement('span');
+    weightIcon.className = 'row-icon';
+    weightIcon.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="vertical-align:-2px"><path d="M12 3V21M12 3L7 7M12 3L17 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 21H20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M3.5 8H10.5L7 15L3.5 8Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M13.5 8H20.5L17 15L13.5 8Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>';
+    const weightName = document.createElement('span');
+    weightName.className = 'row-name';
+    weightName.style.fontWeight = '700';
+    weightName.textContent = 'Weight';
+    weightRow.appendChild(weightIcon);
+    weightRow.appendChild(weightName);
+    weightRow.addEventListener('click', () => navigateToPage('weight'));
+    sidebarListEl.appendChild(weightRow);
+
+    const gymExpanded = expanded.has('__gym__');
+    const gymRow = document.createElement('div');
+    gymRow.className = 'tree-row';
+    gymRow.style.paddingLeft = '6px';
+
+    const gymIcon = document.createElement('span');
+    gymIcon.className = 'row-icon';
+    gymIcon.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="vertical-align:-2px"><path d="M3 9V15M6 6V18M18 6V18M21 9V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 12H18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+    const gymName = document.createElement('span');
+    gymName.className = 'row-name';
+    gymName.style.fontWeight = '700';
+    gymName.textContent = 'Gym';
+    gymRow.appendChild(gymIcon);
+    gymRow.appendChild(gymName);
+    gymRow.addEventListener('click', () => {
+      if (gymExpanded) expanded.delete('__gym__'); else expanded.add('__gym__');
+      saveExpanded();
+      navigateGymTab('plan');
+    });
+    sidebarListEl.appendChild(gymRow);
+
+    if (gymExpanded) {
+      const planRow = document.createElement('div');
+      planRow.className = 'tree-row' + (currentPage === 'gym' && currentGymTab === 'plan' ? ' active' : '');
+      planRow.style.paddingLeft = '27px';
+      const planIcon = document.createElement('span');
+      planIcon.className = 'row-icon';
+      planIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="vertical-align:-2px"><rect x="3" y="2" width="10" height="12" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 6H10.5M5.5 8.5H10.5M5.5 11H8.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
+      const planName = document.createElement('span');
+      planName.className = 'row-name';
+      planName.textContent = 'Plan';
+      planRow.appendChild(planIcon);
+      planRow.appendChild(planName);
+      planRow.addEventListener('click', () => navigateGymTab('plan'));
+      sidebarListEl.appendChild(planRow);
+
+      const progRow = document.createElement('div');
+      progRow.className = 'tree-row' + (currentPage === 'gym' && currentGymTab === 'progress' ? ' active' : '');
+      progRow.style.paddingLeft = '27px';
+      const progIcon = document.createElement('span');
+      progIcon.className = 'row-icon';
+      progIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="vertical-align:-2px"><path d="M2.5 13.5V2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2.5 13.5H13.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M3.5 10.5L6.5 7L9 9L13 4.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      const progName = document.createElement('span');
+      progName.className = 'row-name';
+      progName.textContent = 'Progress';
+      progRow.appendChild(progIcon);
+      progRow.appendChild(progName);
+      progRow.addEventListener('click', () => navigateGymTab('progress'));
+      sidebarListEl.appendChild(progRow);
+    }
+  }
+
+  rootAddBtn.addEventListener('click', () => {
+    expanded.add('__root__'); saveExpanded();
+    creatingUnderParent = null;
+    renderTree();
+  });
+
+  // ---------- breadcrumbs ----------
+  function renderBreadcrumbs() {
+    breadcrumbsEl.innerHTML = '';
+    if (currentPage === 'weight') {
+      const c = document.createElement('span');
+      c.className = 'crumb current';
+      c.textContent = 'Weight';
+      breadcrumbsEl.appendChild(c);
+      return;
+    }
+    if (currentPage === 'gym') {
+      breadcrumbsEl.innerHTML = '';
+      const root = document.createElement('span');
+      root.className = 'crumb';
+      root.textContent = 'Gym';
+      root.addEventListener('click', () => navigateGymTab(currentGymTab));
+      breadcrumbsEl.appendChild(root);
+      const sep = document.createElement('span');
+      sep.className = 'crumb-sep';
+      sep.textContent = '/';
+      breadcrumbsEl.appendChild(sep);
+      const tabCrumb = document.createElement('span');
+      const inDetail = currentGymTab === 'progress' && currentProgressExId;
+      tabCrumb.className = 'crumb' + (inDetail ? '' : ' current');
+      tabCrumb.textContent = currentGymTab === 'plan' ? 'Plan' : 'Progress';
+      tabCrumb.addEventListener('click', () => navigateGymTab(currentGymTab));
+      breadcrumbsEl.appendChild(tabCrumb);
+      if (inDetail) {
+        const ex = allGymPEx.find(e => e.id === currentProgressExId);
+        const sep2 = document.createElement('span');
+        sep2.className = 'crumb-sep';
+        sep2.textContent = '/';
+        breadcrumbsEl.appendChild(sep2);
+        const exCrumb = document.createElement('span');
+        exCrumb.className = 'crumb current';
+        exCrumb.textContent = ex ? ex.name : '';
+        breadcrumbsEl.appendChild(exCrumb);
+      }
+      return;
+    }
+    const chain = [];
+    let fid = currentFolderId;
+    while (fid) {
+      const f = allFolders.find(x => x.id === fid);
+      if (!f) break;
+      chain.unshift(f);
+      fid = norm(f.parentId);
+    }
+    const rootCrumb = document.createElement('span');
+    rootCrumb.className = 'crumb' + (chain.length === 0 ? ' current' : '');
+    rootCrumb.textContent = 'ToDo';
+    rootCrumb.addEventListener('click', () => navigateTo(null));
+    breadcrumbsEl.appendChild(rootCrumb);
+    chain.forEach((f, i) => {
+      const sep = document.createElement('span');
+      sep.className = 'crumb-sep';
+      sep.textContent = '/';
+      breadcrumbsEl.appendChild(sep);
+      const c = document.createElement('span');
+      c.className = 'crumb' + (i === chain.length - 1 ? ' current' : '');
+      c.innerHTML = iconSVG(f.icon || 'folder', 13) + ' <span>' + f.name.replace(/</g, '&lt;') + '</span>';
+      c.addEventListener('click', () => navigateTo(f.id));
+      breadcrumbsEl.appendChild(c);
+    });
+  }
+
+  function navigateTo(folderId) {
+    currentPage = 'todo';
+    currentFolderId = folderId;
+    renderAll();
+    autoCollapseOnMobile();
+  }
+  function navigateToPage(page) {
+    currentPage = page;
+    renderAll();
+    autoCollapseOnMobile();
+  }
+
+  // ---------- tasks ----------
+  function taskSortKey(t) { return (t.order !== undefined && t.order !== null) ? t.order : (t.createdAt || 0); }
+
+  let dragTaskId = null;
+
+  function reorderTask(draggedId, targetId, before) {
+    const dragged = allTasks.find(x => x.id === draggedId);
+    const target = allTasks.find(x => x.id === targetId);
+    if (!dragged || !target) return;
+    if ((dragged.priority || 0) !== (target.priority || 0)) return;
+    if (norm(dragged.folderId) !== norm(target.folderId)) return;
+
+    const group = allTasks
+      .filter(x => (x.priority || 0) === (dragged.priority || 0) && norm(x.folderId) === norm(dragged.folderId) && x.id !== draggedId)
+      .sort((a, b) => taskSortKey(a) - taskSortKey(b));
+    const idx = group.findIndex(x => x.id === targetId);
+    const insertAt = before ? idx : idx + 1;
+    group.splice(insertAt, 0, dragged);
+
+    group.forEach((t, i) => {
+      const newOrder = (i + 1) * 1000;
+      if (taskSortKey(t) !== newOrder) {
+        t.order = newOrder;
+        if (!usingLocal) tasksCol.doc(t.id).update({ order: newOrder }).catch(() => {});
+      }
+    });
+    if (usingLocal) saveLocal();
+    renderTasks();
+  }
+
+  function renderTasks() {
+    const addRowEl = document.getElementById('add-row');
+    if (currentFolderId === null) {
+      addRowEl.style.display = 'none';
+      listEl.innerHTML = '';
+      emptyEl.style.display = 'none';
+      return;
+    }
+    addRowEl.style.display = 'flex';
+    const all = allTasks
+      .filter(t => norm(t.folderId) === norm(currentFolderId))
+      .sort((a, b) => {
+        const pd = (b.priority || 0) - (a.priority || 0);
+        if (pd !== 0) return pd;
+        return taskSortKey(a) - taskSortKey(b);
+      });
+    const active = all.filter(t => !t.done);
+    const done = all.filter(t => t.done);
+    const tasks = active.concat(done);
+    listEl.innerHTML = '';
+    emptyEl.style.display = tasks.length ? 'none' : 'block';
+    let dividerInserted = false;
+    tasks.forEach(t => {
+      if (t.done && !dividerInserted && active.length) {
+        dividerInserted = true;
+        const divider = document.createElement('div');
+        divider.id = 'done-divider';
+        listEl.appendChild(divider);
+      }
+      const row = document.createElement('div');
+      row.className = 'task' + (t.done ? ' done' : '');
+      if (expandedTasks.has(t.id)) row.style.borderRadius = '10px 10px 0 0';
+      const check = document.createElement('div');
+      check.className = 'check' + (t.done ? ' done' : '');
+      check.innerHTML = '<svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.5L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      check.addEventListener('click', () => toggleTask(t));
+
+      const pInfo = prioInfo(t.priority || 0);
+      const prioBadge = document.createElement('div');
+      prioBadge.className = 'prio-badge';
+      prioBadge.style.background = pInfo.color + '22';
+      prioBadge.style.color = pInfo.color;
+      prioBadge.appendChild(buildPrioGlyph(pInfo));
+      prioBadge.title = pInfo.label;
+      prioBadge.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openPrioPopover(prioBadge, (val) => setTaskPriority(t, val));
+      });
+
+      const text = document.createElement('div');
+      text.className = 'task-text';
+      text.textContent = t.text;
+
+      const meta = document.createElement('div');
+      meta.className = 'task-meta';
+
+      const created = document.createElement('span');
+      created.className = 'meta-created';
+      created.textContent = t.done && t.completedAt ? ('✓ done ' + fmtDate(new Date(t.completedAt))) : fmtCreated(t.createdAt);
+      if (t.done) created.style.color = '#33c27a';
+      meta.appendChild(created);
+
+      const overdue = isOverdue(t.deadline, t.done);
+      const chip = document.createElement('span');
+      chip.className = 'deadline-chip' + (t.deadline ? (overdue ? ' overdue' : '') : ' empty');
+      chip.innerHTML = '<svg width="11" height="11" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="3" width="11" height="10.5" rx="1.8" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 6H13.5M5.5 2V4M10.5 2V4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
+      const chipLabel = document.createElement('span');
+      chipLabel.textContent = t.deadline ? fmtDeadline(t.deadline) : 'deadline';
+      chip.appendChild(chipLabel);
+      chip.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openDatePopover(chip, t.deadline, (val) => setTaskDeadline(t, val));
+      });
+      meta.appendChild(chip);
+
+      const body = document.createElement('div');
+      body.className = 'task-body';
+      body.appendChild(text);
+      body.appendChild(meta);
+
+      const subCount = allSubtasks.filter(s => s.taskId === t.id);
+      const subDone = subCount.filter(s => s.done).length;
+      const isOpen = expandedTasks.has(t.id);
+      const toggle = document.createElement('button');
+      toggle.className = 'task-toggle' + (isOpen ? ' open' : '');
+      let toggleLabel = '';
+      if (subCount.length) toggleLabel += subDone + '/' + subCount.length;
+      if (t.note) toggleLabel += (toggleLabel ? ' · ' : '') + '📝';
+      toggle.innerHTML = '<svg width="9" height="9" viewBox="0 0 16 16" fill="none"><path d="M5 3L11 8L5 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>' + (toggleLabel || 'details') + '</span>';
+      toggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (isOpen) expandedTasks.delete(t.id); else expandedTasks.add(t.id);
+        renderTasks();
+      });
+
+      const del = document.createElement('button');
+      del.className = 'del-btn';
+      del.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 4H13M6.5 4V2.7C6.5 2.3 6.8 2 7.2 2H8.8C9.2 2 9.5 2.3 9.5 2.7V4M5 4V12.5C5 13 5.4 13.4 5.9 13.4H10.1C10.6 13.4 11 13 11 12.5V4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      del.addEventListener('click', () => deleteTask(t));
+      row.appendChild(check);
+      row.appendChild(prioBadge);
+      row.appendChild(body);
+      row.appendChild(toggle);
+      row.appendChild(del);
+
+      const wrap = document.createElement('div');
+      wrap.appendChild(row);
+
+      if (isOpen) {
+        const detail = document.createElement('div');
+        detail.className = 'task-detail';
+        detail.style.cssText = 'padding:10px 12px 12px 42px;background:var(--bg-elevated);border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px;';
+
+        const subLabel = document.createElement('div');
+        subLabel.className = 'detail-label';
+        subLabel.textContent = 'subtasks';
+        detail.appendChild(subLabel);
+
+        const subList = document.createElement('div');
+        subList.className = 'subtask-list';
+        subCount.sort((a, b) => (a.order || 0) - (b.order || 0)).forEach(sub => {
+          const sRow = document.createElement('div');
+          sRow.className = 'subtask-row' + (sub.done ? ' done' : '');
+          const sCheck = document.createElement('div');
+          sCheck.className = 'subtask-check' + (sub.done ? ' done' : '');
+          sCheck.innerHTML = '<svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.5L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+          sCheck.addEventListener('click', () => toggleSubtask(sub));
+          const sText = document.createElement('div');
+          sText.className = 'subtask-text';
+          sText.textContent = sub.text;
+          const sDel = document.createElement('button');
+          sDel.className = 'subtask-del';
+          sDel.innerHTML = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 4H13M6.5 4V2.7C6.5 2.3 6.8 2 7.2 2H8.8C9.2 2 9.5 2.3 9.5 2.7V4M5 4V12.5C5 13 5.4 13.4 5.9 13.4H10.1C10.6 13.4 11 13 11 12.5V4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+          sDel.addEventListener('click', () => deleteSubtask(sub));
+          sRow.appendChild(sCheck); sRow.appendChild(sText); sRow.appendChild(sDel);
+          subList.appendChild(sRow);
+        });
+        detail.appendChild(subList);
+
+        const subAddRow = document.createElement('div');
+        subAddRow.className = 'subtask-add-row';
+        const subInput = document.createElement('input');
+        subInput.placeholder = 'add subtask...';
+        const subAddBtn = document.createElement('button');
+        subAddBtn.className = 'del-btn';
+        subAddBtn.style.cssText = 'opacity:1;color:var(--accent);width:26px;height:26px;';
+        subAddBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+        function submitSub() {
+          const val = subInput.value.trim();
+          if (!val) return;
+          subInput.value = '';
+          addSubtask(t.id, val);
+        }
+        subAddBtn.addEventListener('click', submitSub);
+        subInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitSub(); });
+        subAddRow.appendChild(subInput);
+        subAddRow.appendChild(subAddBtn);
+        detail.appendChild(subAddRow);
+
+        const noteLabel = document.createElement('div');
+        noteLabel.className = 'detail-label';
+        noteLabel.style.marginTop = '4px';
+        noteLabel.textContent = 'note';
+        detail.appendChild(noteLabel);
+
+        const noteArea = document.createElement('textarea');
+        noteArea.className = 'note-area';
+        noteArea.placeholder = 'note text...';
+        noteArea.value = t.note || '';
+        noteArea.addEventListener('blur', () => setTaskNote(t, noteArea.value));
+        detail.appendChild(noteArea);
+
+        wrap.appendChild(detail);
+      }
+
+      listEl.appendChild(wrap);
+
+      row.draggable = true;
+      row.addEventListener('dragstart', (e) => {
+        dragTaskId = t.id;
+        e.dataTransfer.effectAllowed = 'move';
+        try { e.dataTransfer.setData('text/plain', t.id); } catch (err) {}
+        row.classList.add('dragging');
+      });
+      row.addEventListener('dragend', () => {
+        row.classList.remove('dragging');
+        document.querySelectorAll('.task.drop-before,.task.drop-after').forEach(el => el.classList.remove('drop-before', 'drop-after'));
+        dragTaskId = null;
+      });
+      row.addEventListener('dragover', (e) => {
+        if (!dragTaskId || dragTaskId === t.id) return;
+        const dragged = allTasks.find(x => x.id === dragTaskId);
+        if (!dragged || (dragged.priority || 0) !== (t.priority || 0) || norm(dragged.folderId) !== norm(t.folderId)) return;
+        e.preventDefault();
+        const rect = row.getBoundingClientRect();
+        const before = (e.clientY - rect.top) < rect.height / 2;
+        row.classList.toggle('drop-before', before);
+        row.classList.toggle('drop-after', !before);
+      });
+      row.addEventListener('dragleave', () => {
+        row.classList.remove('drop-before', 'drop-after');
+      });
+      row.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const before = row.classList.contains('drop-before');
+        row.classList.remove('drop-before', 'drop-after');
+        if (!dragTaskId || dragTaskId === t.id) return;
+        reorderTask(dragTaskId, t.id, before);
+        dragTaskId = null;
+      });
+    });
+  }
+
+  function renderAll() {
+    renderTree();
+    renderBreadcrumbs();
+    document.getElementById('page-todo').style.display = currentPage === 'todo' ? 'block' : 'none';
+    document.getElementById('page-weight').style.display = currentPage === 'weight' ? 'block' : 'none';
+    document.getElementById('page-gym').style.display = currentPage === 'gym' ? 'block' : 'none';
+    if (currentPage === 'todo') renderTasks();
+    else if (currentPage === 'weight') renderWeightPage();
+    else if (currentPage === 'gym') renderGymPage();
+  }
+
+  // ---------- weight page ----------
+  let weightsCol = null;
+  let allWeights = []; // {id, value, date}
+  const weightInput = document.getElementById('weight-input');
+  const weightAddBtn = document.getElementById('weight-add-btn');
+  const weightChartWrap = document.getElementById('weight-chart-wrap');
+  const weightTableWrap = document.getElementById('weight-table-wrap');
+  const weightEmpty = document.getElementById('weight-empty');
+
+  function addWeight() {
+    const raw = weightInput.value.replace(',', '.').trim();
+    const val = parseFloat(raw);
+    if (!raw || isNaN(val) || val <= 0) return;
+    weightInput.value = '';
+    const data = { value: val, date: Date.now() };
+    if (usingLocal) {
+      allWeights.push({ id: 'w' + Date.now() + Math.random(), ...data });
+      saveLocal();
+      renderWeightPage();
+    } else {
+      weightsCol.add(data).catch(() => {});
+    }
+  }
+  function deleteWeight(w) {
+    if (usingLocal) {
+      allWeights = allWeights.filter(x => x.id !== w.id);
+      saveLocal();
+      renderWeightPage();
+    } else {
+      weightsCol.doc(w.id).delete().catch(() => {});
+    }
+  }
+  weightAddBtn.addEventListener('click', addWeight);
+  weightInput.addEventListener('keydown', e => { if (e.key === 'Enter') addWeight(); });
+
+  function buildWeightChartSVG(sorted) {
+    const w = 520, h = 190, pad = 34;
+    const values = sorted.map(x => x.value);
+    let min = Math.min(...values), max = Math.max(...values);
+    if (min === max) { min -= 1; max += 1; }
+    const rangePad = (max - min) * 0.1 || 1;
+    min -= rangePad; max += rangePad;
+
+    const pts = sorted.map((x, i) => {
+      const px = sorted.length === 1 ? w / 2 : pad + i * (w - 2 * pad) / (sorted.length - 1);
+      const py = h - pad - (x.value - min) / (max - min) * (h - 2 * pad);
+      return { x: px, y: py, v: x.value, d: x.date };
+    });
+
+    const linePts = pts.map(p => p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
+    const circles = pts.map(p =>
+      `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="var(--accent)" stroke="var(--bg-elevated)" stroke-width="1.5"><title>${p.v} kg — ${fmtDate(new Date(p.d))}</title></circle>`
+    ).join('');
+
+    return `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
+      <line x1="${pad}" y1="${h - pad}" x2="${w - pad}" y2="${h - pad}" stroke="var(--border)" stroke-width="1"/>
+      <text x="4" y="${pad + 4}" font-size="10" fill="var(--text-dim)">${max.toFixed(1)}</text>
+      <text x="4" y="${h - pad + 4}" font-size="10" fill="var(--text-dim)">${min.toFixed(1)}</text>
+      ${pts.length > 1 ? `<polyline points="${linePts}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>` : ''}
+      ${circles}
+    </svg>`;
+  }
+
+  function renderWeightPage() {
+    const sorted = allWeights.slice().sort((a, b) => a.date - b.date);
+    const descSorted = sorted.slice().reverse();
+
+    if (!sorted.length) {
+      weightChartWrap.style.display = 'none';
+      weightTableWrap.style.display = 'none';
+      weightEmpty.style.display = 'block';
+      return;
+    }
+    weightEmpty.style.display = 'none';
+    weightChartWrap.style.display = 'block';
+    weightTableWrap.style.display = 'block';
+
+    weightChartWrap.innerHTML = buildWeightChartSVG(sorted);
+
+    weightTableWrap.innerHTML = '';
+    descSorted.forEach(w => {
+      const row = document.createElement('div');
+      row.className = 'w-row';
+      const left = document.createElement('span');
+      left.className = 'w-date';
+      left.textContent = fmtDate(new Date(w.date));
+      const right = document.createElement('span');
+      right.style.display = 'flex';
+      right.style.alignItems = 'center';
+      right.style.gap = '10px';
+      const val = document.createElement('span');
+      val.className = 'w-value';
+      val.textContent = w.value + ' kg';
+      const del = document.createElement('button');
+      del.className = 'w-del';
+      del.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 4H13M6.5 4V2.7C6.5 2.3 6.8 2 7.2 2H8.8C9.2 2 9.5 2.3 9.5 2.7V4M5 4V12.5C5 13 5.4 13.4 5.9 13.4H10.1C10.6 13.4 11 13 11 12.5V4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      del.addEventListener('click', () => deleteWeight(w));
+      right.appendChild(val);
+      right.appendChild(del);
+      row.appendChild(left);
+      row.appendChild(right);
+      weightTableWrap.appendChild(row);
+    });
+  }
+
+  function buildLineChartSVG(sorted, valueKey) {
+    valueKey = valueKey || 'value';
+    const w = 520, h = 190, pad = 34;
+    const values = sorted.map(x => x[valueKey]);
+    let min = Math.min(...values), max = Math.max(...values);
+    if (min === max) { min -= 1; max += 1; }
+    const rangePad = (max - min) * 0.1 || 1;
+    min -= rangePad; max += rangePad;
+
+    const pts = sorted.map((x, i) => {
+      const px = sorted.length === 1 ? w / 2 : pad + i * (w - 2 * pad) / (sorted.length - 1);
+      const py = h - pad - (x[valueKey] - min) / (max - min) * (h - 2 * pad);
+      return { x: px, y: py, v: x[valueKey], d: x.date };
+    });
+
+    const linePts = pts.map(p => p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
+    const circles = pts.map(p =>
+      `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="var(--accent)" stroke="var(--bg-elevated)" stroke-width="1.5"><title>${p.v} — ${fmtDate(new Date(p.d))}</title></circle>`
+    ).join('');
+
+    return `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
+      <line x1="${pad}" y1="${h - pad}" x2="${w - pad}" y2="${h - pad}" stroke="var(--border)" stroke-width="1"/>
+      <text x="4" y="${pad + 4}" font-size="10" fill="var(--text-dim)">${max.toFixed(1)}</text>
+      <text x="4" y="${h - pad + 4}" font-size="10" fill="var(--text-dim)">${min.toFixed(1)}</text>
+      ${pts.length > 1 ? `<polyline points="${linePts}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>` : ''}
+      ${circles}
+    </svg>`;
+  }
+
+  // ---------- gym page ----------
+  const GYM_DAYS = [
+    { id: 'mon', label: 'Monday' },
+    { id: 'wed', label: 'Wednesday' },
+    { id: 'fri', label: 'Friday' }
+  ];
+  const DEFAULT_GYM_EXERCISES = {
+    mon: [
+      ['Жим лежа', '4x6-8'], ['Бабочка', '4x10-12'], ['Тяга широким хватом', '4x6-8'],
+      ['Горизонтальная тяга блока', '4x6-8'], ['Жим над головой', '4x6-8'],
+      ['Руки на трицепс', '4x10-12'], ['Разгибание ног в тренажере', '4x10-12']
+    ],
+    wed: [
+      ['Хаммер на грудь', '2x8-10'], ['Приседания со штангой', '4x6-8'], ['Жим над головой', '2x8-10'],
+      ['Гантели на бицепс', '2x8-10'], ['Руки на трицепс', '2x10-12'], ['Гиперэкстензия', '4x10-12']
+    ],
+    fri: [
+      ['Жим гантелей на наклонной', '4x6-8'], ['Горизонтальная тяга с упором в грудь', '4x8-10'],
+      ['Тяга блока узким хватом', '4x6-10'], ['Штанга на бицепс', '4x6-8'],
+      ['Руки на трицепс', '4x10-12'], ['Разгибание ног в тренажере', '4x10-12'], ['Гиперэкстензия', '4x10-12']
+    ]
+  };
+
+  let gymExercisesCol = null, gymLogsCol = null, gymPExCol = null, gymPLogsCol = null;
+  let allGymExercises = [], allGymLogs = [], allGymPEx = [], allGymPLogs = [];
+  let currentGymTab = 'plan';
+  let currentPlanDay = 'mon';
+  let currentProgressExId = null;
+  let gymSeeded = false;
+
+  function seedGymExercisesIfEmpty() {
+    if (gymSeeded) return;
+    if (allGymExercises.length) { gymSeeded = true; return; }
+    gymSeeded = true;
+    GYM_DAYS.forEach(day => {
+      DEFAULT_GYM_EXERCISES[day.id].forEach(([name, scheme], i) => {
+        const data = { day: day.id, name, scheme, order: (i + 1) * 1000 };
+        if (usingLocal) allGymExercises.push({ id: 'ge' + Date.now() + Math.random(), ...data });
+        else gymExercisesCol.add(data).catch(() => {});
+      });
+    });
+    if (usingLocal) { saveLocal(); if (currentPage === 'gym') renderGymPage(); }
+  }
+
+  function navigateGymTab(tab) { currentPage = 'gym'; currentGymTab = tab; currentProgressExId = null; renderAll(); autoCollapseOnMobile(); }
+  function navigateGymDay(day) { currentPlanDay = day; renderGymPage(); }
+  function navigateProgressEx(id) { currentProgressExId = id; renderGymPage(); }
+
+  function renderGymPage() {
+    if (currentGymTab === 'plan') renderGymPlan();
+    else renderGymProgress();
+  }
+
+  function renderGymPlan() {
+    const body = document.getElementById('gym-body');
+    body.innerHTML = '';
+
+    const dayTabs = document.createElement('div');
+    dayTabs.className = 'tab-row';
+    GYM_DAYS.forEach(d => {
+      const b = document.createElement('button');
+      b.className = 'tab-btn' + (currentPlanDay === d.id ? ' active' : '');
+      b.textContent = d.label;
+      b.addEventListener('click', () => navigateGymDay(d.id));
+      dayTabs.appendChild(b);
+    });
+    body.appendChild(dayTabs);
+
+    const exercises = allGymExercises.filter(e => e.day === currentPlanDay).sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    const toolbar = document.createElement('div');
+    toolbar.className = 'gym-toolbar';
+    const addExBtn = document.createElement('button');
+    addExBtn.style.cssText = 'background:var(--bg-elevated);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:0 16px;height:36px;font-size:13.5px;font-weight:600;cursor:pointer;';
+    addExBtn.textContent = '+ Exercise';
+    toolbar.appendChild(addExBtn);
+    body.appendChild(toolbar);
+
+    const formHolder = document.createElement('div');
+    formHolder.style.marginBottom = '16px';
+    body.appendChild(formHolder);
+
+    addExBtn.addEventListener('click', () => {
+      if (formHolder.innerHTML) { formHolder.innerHTML = ''; return; }
+      const form = document.createElement('div');
+      form.className = 'ex-add-form';
+      const nameInp = document.createElement('input');
+      nameInp.className = 'ex-name-inp';
+      nameInp.placeholder = 'exercise name...';
+      const schemeInp = document.createElement('input');
+      schemeInp.className = 'ex-scheme-inp';
+      schemeInp.placeholder = '4x8-10';
+      const ok = document.createElement('button');
+      ok.style.cssText = 'background:var(--accent);color:#fff;border:none;border-radius:8px;padding:0 14px;height:34px;font-size:13px;font-weight:600;cursor:pointer;';
+      ok.textContent = 'Add';
+      function submit() {
+        const name = nameInp.value.trim();
+        if (!name) return;
+        const scheme = schemeInp.value.trim();
+        const data = { day: currentPlanDay, name, scheme, order: Date.now() };
+        if (usingLocal) { allGymExercises.push({ id: 'ge' + Date.now() + Math.random(), ...data }); saveLocal(); renderGymPage(); }
+        else gymExercisesCol.add(data).catch(() => {});
+        formHolder.innerHTML = '';
+      }
+      ok.addEventListener('click', submit);
+      nameInp.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+      form.appendChild(nameInp); form.appendChild(schemeInp); form.appendChild(ok);
+      formHolder.appendChild(form);
+      setTimeout(() => nameInp.focus(), 30);
+    });
+
+    if (!exercises.length) {
+      const empty = document.createElement('div');
+      empty.id = 'empty-state';
+      empty.textContent = 'add exercises for this day';
+      body.appendChild(empty);
+      return;
+    }
+
+    const list = document.createElement('div');
+    list.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+    exercises.forEach(ex => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:10px;background:var(--bg-elevated);border:1px solid var(--border);';
+      const left = document.createElement('div');
+      const nameEl = document.createElement('div');
+      nameEl.style.cssText = 'font-size:14.5px;font-weight:600;';
+      nameEl.textContent = ex.name;
+      left.appendChild(nameEl);
+      if (ex.scheme) {
+        const schemeEl = document.createElement('div');
+        schemeEl.style.cssText = 'font-size:12.5px;color:var(--text-dim);margin-top:2px;';
+        schemeEl.textContent = ex.scheme;
+        left.appendChild(schemeEl);
+      }
+      const del = document.createElement('button');
+      del.className = 'del-btn';
+      del.style.opacity = '';
+      del.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 4H13M6.5 4V2.7C6.5 2.3 6.8 2 7.2 2H8.8C9.2 2 9.5 2.3 9.5 2.7V4M5 4V12.5C5 13 5.4 13.4 5.9 13.4H10.1C10.6 13.4 11 13 11 12.5V4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      del.addEventListener('click', () => deleteGymExercise(ex.id));
+      row.addEventListener('mouseenter', () => del.style.opacity = '1');
+      row.addEventListener('mouseleave', () => del.style.opacity = '0');
+      del.style.opacity = '0';
+      row.appendChild(left);
+      row.appendChild(del);
+      list.appendChild(row);
+    });
+    body.appendChild(list);
+  }
+
+  function addGymLogRow(day) {
+    const data = { day, date: Date.now(), values: {} };
+    if (usingLocal) {
+      allGymLogs.push({ id: 'gl' + Date.now() + Math.random(), ...data });
+      saveLocal();
+      renderGymPlan();
+    } else {
+      gymLogsCol.add(data).catch(() => {});
+    }
+  }
+
+  function deleteGymExercise(id) {
+    if (usingLocal) {
+      allGymExercises = allGymExercises.filter(e => e.id !== id);
+      allGymLogs.forEach(l => { if (l.values && l.values[id]) delete l.values[id]; });
+      saveLocal();
+      renderGymPlan();
+    } else {
+      gymExercisesCol.doc(id).delete().catch(() => {});
+    }
+  }
+
+  function renderGymProgress() {
+    const body = document.getElementById('gym-body');
+    body.innerHTML = '';
+
+    if (currentProgressExId) {
+      const ex = allGymPEx.find(e => e.id === currentProgressExId);
+      if (!ex) { currentProgressExId = null; return renderGymProgress(); }
+
+      const back = document.createElement('div');
+      back.className = 'back-link';
+      back.innerHTML = '← back to all exercises';
+      back.addEventListener('click', () => navigateProgressEx(null));
+      body.appendChild(back);
+
+      const title = document.createElement('h1');
+      title.style.cssText = 'font-size:16px;margin:0 0 16px;';
+      title.textContent = ex.name;
+      body.appendChild(title);
+
+      const addRow = document.createElement('div');
+      addRow.id = 'add-row';
+      const inp = document.createElement('input');
+      inp.type = 'number'; inp.step = '0.5'; inp.inputMode = 'decimal';
+      inp.placeholder = 'weight, kg...';
+      const btn = document.createElement('button');
+      btn.textContent = 'Add';
+      function submit() {
+        const val = parseFloat((inp.value || '').replace(',', '.'));
+        if (isNaN(val) || val <= 0) return;
+        inp.value = '';
+        const data = { exerciseId: ex.id, value: val, date: Date.now() };
+        if (usingLocal) { allGymPLogs.push({ id: 'gpl' + Date.now() + Math.random(), ...data }); saveLocal(); renderGymProgress(); }
+        else gymPLogsCol.add(data).catch(() => {});
+      }
+      btn.addEventListener('click', submit);
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+      addRow.appendChild(inp); addRow.appendChild(btn);
+      body.appendChild(addRow);
+
+      const entries = allGymPLogs.filter(l => l.exerciseId === ex.id).sort((a, b) => a.date - b.date);
+      if (!entries.length) {
+        const empty = document.createElement('div');
+        empty.id = 'empty-state';
+        empty.textContent = 'no entries yet';
+        body.appendChild(empty);
+        return;
+      }
+
+      const chartWrap = document.createElement('div');
+      chartWrap.id = 'weight-chart-wrap';
+      chartWrap.innerHTML = buildLineChartSVG(entries, 'value');
+      body.appendChild(chartWrap);
+
+      const tableWrap = document.createElement('div');
+      tableWrap.id = 'weight-table-wrap';
+      entries.slice().reverse().forEach(en => {
+        const row = document.createElement('div');
+        row.className = 'w-row';
+        const left = document.createElement('span');
+        left.className = 'w-date';
+        left.textContent = fmtDate(new Date(en.date));
+        const right = document.createElement('span');
+        right.style.cssText = 'display:flex;align-items:center;gap:10px';
+        const val = document.createElement('span');
+        val.className = 'w-value';
+        val.textContent = en.value + ' kg';
+        const del = document.createElement('button');
+        del.className = 'w-del';
+        del.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 4H13M6.5 4V2.7C6.5 2.3 6.8 2 7.2 2H8.8C9.2 2 9.5 2.3 9.5 2.7V4M5 4V12.5C5 13 5.4 13.4 5.9 13.4H10.1C10.6 13.4 11 13 11 12.5V4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        del.addEventListener('click', () => {
+          if (usingLocal) { allGymPLogs = allGymPLogs.filter(x => x.id !== en.id); saveLocal(); renderGymProgress(); }
+          else gymPLogsCol.doc(en.id).delete().catch(() => {});
+        });
+        right.appendChild(val); right.appendChild(del);
+        row.appendChild(left); row.appendChild(right);
+        tableWrap.appendChild(row);
+      });
+      body.appendChild(tableWrap);
+      return;
+    }
+
+    const toolbar = document.createElement('div');
+    toolbar.className = 'gym-toolbar';
+    const addBtn = document.createElement('button');
+    addBtn.style.cssText = 'background:var(--bg-elevated);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:0 16px;height:36px;font-size:13.5px;font-weight:600;cursor:pointer;';
+    addBtn.textContent = '+ Exercise';
+    toolbar.appendChild(addBtn);
+    body.appendChild(toolbar);
+
+    const formHolder = document.createElement('div');
+    formHolder.style.marginBottom = '16px';
+    body.appendChild(formHolder);
+
+    addBtn.addEventListener('click', () => {
+      if (formHolder.innerHTML) { formHolder.innerHTML = ''; return; }
+      const form = document.createElement('div');
+      form.className = 'ex-add-form';
+      const nameInp = document.createElement('input');
+      nameInp.className = 'ex-name-inp';
+      nameInp.placeholder = 'exercise name...';
+      const ok = document.createElement('button');
+      ok.style.cssText = 'background:var(--accent);color:#fff;border:none;border-radius:8px;padding:0 14px;height:34px;font-size:13px;font-weight:600;cursor:pointer;';
+      ok.textContent = 'Add';
+      function submit() {
+        const name = nameInp.value.trim();
+        if (!name) return;
+        const data = { name, order: Date.now() };
+        if (usingLocal) { allGymPEx.push({ id: 'pe' + Date.now() + Math.random(), ...data }); saveLocal(); }
+        else gymPExCol.add(data).catch(() => {});
+        formHolder.innerHTML = '';
+        if (usingLocal) renderGymPage();
+      }
+      ok.addEventListener('click', submit);
+      nameInp.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+      form.appendChild(nameInp); form.appendChild(ok);
+      formHolder.appendChild(form);
+      setTimeout(() => nameInp.focus(), 30);
+    });
+
+    const list = allGymPEx.slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    if (!list.length) {
+      const empty = document.createElement('div');
+      empty.id = 'empty-state';
+      empty.textContent = 'add your first exercise to track progress';
+      body.appendChild(empty);
+      return;
+    }
+    const grid = document.createElement('div');
+    grid.className = 'progress-ex-grid';
+    list.forEach(ex => {
+      const tile = document.createElement('div');
+      tile.className = 'progress-ex-tile';
+      tile.textContent = ex.name;
+      const del = document.createElement('button');
+      del.className = 'pex-del';
+      del.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 4H13M6.5 4V2.7C6.5 2.3 6.8 2 7.2 2H8.8C9.2 2 9.5 2.3 9.5 2.7V4M5 4V12.5C5 13 5.4 13.4 5.9 13.4H10.1C10.6 13.4 11 13 11 12.5V4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      del.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (usingLocal) {
+          allGymPEx = allGymPEx.filter(x => x.id !== ex.id);
+          allGymPLogs = allGymPLogs.filter(x => x.exerciseId !== ex.id);
+          saveLocal(); renderGymProgress();
+        } else {
+          gymPExCol.doc(ex.id).delete().catch(() => {});
+        }
+      });
+      tile.appendChild(del);
+      tile.addEventListener('click', () => navigateProgressEx(ex.id));
+      grid.appendChild(tile);
+    });
+    body.appendChild(grid);
+  }
+
+  // ---------- folder CRUD ----------
+  function createFolder(parentId, name, icon) {
+    creatingUnderParent = undefined;
+    const data = { name, icon: icon || '📁', parentId: parentId, createdAt: Date.now(), order: Date.now() };
+    if (usingLocal) {
+      allFolders.push({ id: 'lf' + Date.now() + Math.random(), ...data });
+      saveLocal();
+      if (parentId) { expanded.add(parentId); saveExpanded(); }
+      renderAll();
+    } else {
+      foldersCol.add(data).catch(() => {});
+      if (parentId) { expanded.add(parentId); saveExpanded(); }
+    }
+  }
+
+  function updateFolderIcon(folderId, icon) {
+    if (usingLocal) {
+      const f = allFolders.find(x => x.id === folderId);
+      if (f) f.icon = icon;
+      saveLocal();
+      renderAll();
+    } else {
+      foldersCol.doc(folderId).update({ icon }).catch(() => {});
+    }
+  }
+
+  function collectDescendants(folderId, foldersOut, tasksOut) {
+    const children = allFolders.filter(f => norm(f.parentId) === folderId);
+    children.forEach(c => {
+      foldersOut.push(c.id);
+      collectDescendants(c.id, foldersOut, tasksOut);
+    });
+    allTasks.filter(t => norm(t.folderId) === folderId).forEach(t => tasksOut.push(t.id));
+  }
+
+  function deleteFolder(folderId) {
+    const folderIds = [folderId];
+    const taskIds = [];
+    allTasks.filter(t => norm(t.folderId) === folderId).forEach(t => taskIds.push(t.id));
+    collectDescendants(folderId, folderIds, taskIds);
+
+    if (currentFolderId && folderIds.includes(currentFolderId)) currentFolderId = null;
+
+    if (usingLocal) {
+      allFolders = allFolders.filter(f => !folderIds.includes(f.id));
+      allTasks = allTasks.filter(t => !taskIds.includes(t.id));
+      saveLocal();
+      renderAll();
+    } else {
+      folderIds.forEach(id => foldersCol.doc(id).delete().catch(() => {}));
+      taskIds.forEach(id => tasksCol.doc(id).delete().catch(() => {}));
+    }
+  }
+
+  // ---------- task CRUD ----------
+  function toggleTask(t) {
+    const nowDone = !t.done;
+    const patch = { done: nowDone, completedAt: nowDone ? Date.now() : null };
+    if (usingLocal) {
+      t.done = patch.done;
+      t.completedAt = patch.completedAt;
+      saveLocal();
+      renderTasks();
+    } else {
+      tasksCol.doc(t.id).update(patch).catch(() => {});
+    }
+  }
+  function setTaskPriority(t, value) {
+    if (usingLocal) {
+      t.priority = value;
+      saveLocal();
+      renderTasks();
+    } else {
+      tasksCol.doc(t.id).update({ priority: value }).catch(() => {});
+    }
+  }
+  function setTaskDeadline(t, value) {
+    if (usingLocal) {
+      t.deadline = value;
+      saveLocal();
+      renderTasks();
+    } else {
+      tasksCol.doc(t.id).update({ deadline: value }).catch(() => {});
+    }
+  }
+  function deleteTask(t) {
+    if (usingLocal) {
+      allTasks = allTasks.filter(x => x.id !== t.id);
+      allSubtasks = allSubtasks.filter(s => s.taskId !== t.id);
+      saveLocal();
+      renderTasks();
+    } else {
+      tasksCol.doc(t.id).delete().catch(() => {});
+      allSubtasks.filter(s => s.taskId === t.id).forEach(s => subtasksCol.doc(s.id).delete().catch(() => {}));
+    }
+  }
+  function setTaskNote(t, note) {
+    if (t.note === note) return;
+    if (usingLocal) {
+      t.note = note;
+      saveLocal();
+    } else {
+      tasksCol.doc(t.id).update({ note }).catch(() => {});
+    }
+  }
+  function addSubtask(taskId, text) {
+    const data = { taskId, text, done: false, order: Date.now() };
+    if (usingLocal) {
+      allSubtasks.push({ id: 'st' + Date.now() + Math.random(), ...data });
+      saveLocal();
+      renderTasks();
+    } else {
+      subtasksCol.add(data).catch(() => {});
+    }
+  }
+  function toggleSubtask(s) {
+    if (usingLocal) {
+      s.done = !s.done;
+      saveLocal();
+      renderTasks();
+    } else {
+      subtasksCol.doc(s.id).update({ done: !s.done }).catch(() => {});
+    }
+  }
+  function deleteSubtask(s) {
+    if (usingLocal) {
+      allSubtasks = allSubtasks.filter(x => x.id !== s.id);
+      saveLocal();
+      renderTasks();
+    } else {
+      subtasksCol.doc(s.id).delete().catch(() => {});
+    }
+  }
+  function addTask() {
+    const text = inputEl.value.trim();
+    if (!text) return;
+    inputEl.value = '';
+    const data = { text, done: false, createdAt: Date.now(), folderId: currentFolderId, priority: 0, deadline: null, completedAt: null, order: Date.now() };
+    if (usingLocal) {
+      allTasks.push({ id: 'l' + Date.now() + Math.random(), ...data });
+      saveLocal();
+      renderTasks();
+    } else {
+      tasksCol.add(data).catch(() => {});
+    }
+  }
+  addBtn.addEventListener('click', addTask);
+  inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
+
+  // ---------- persistence ----------
+  function saveLocal() {
+    try {
+      localStorage.setItem('todo_local_tasks', JSON.stringify(allTasks));
+      localStorage.setItem('todo_local_folders', JSON.stringify(allFolders));
+      localStorage.setItem('todo_local_subtasks', JSON.stringify(allSubtasks));
+      localStorage.setItem('todo_local_weights', JSON.stringify(allWeights));
+      localStorage.setItem('todo_local_gym_ex', JSON.stringify(allGymExercises));
+      localStorage.setItem('todo_local_gym_logs', JSON.stringify(allGymLogs));
+      localStorage.setItem('todo_local_gym_pex', JSON.stringify(allGymPEx));
+      localStorage.setItem('todo_local_gym_plogs', JSON.stringify(allGymPLogs));
+    } catch (e) {}
+  }
+  function loadLocal() {
+    try {
+      allTasks = JSON.parse(localStorage.getItem('todo_local_tasks') || '[]');
+      allFolders = JSON.parse(localStorage.getItem('todo_local_folders') || '[]');
+      allSubtasks = JSON.parse(localStorage.getItem('todo_local_subtasks') || '[]');
+      allWeights = JSON.parse(localStorage.getItem('todo_local_weights') || '[]');
+      allGymExercises = JSON.parse(localStorage.getItem('todo_local_gym_ex') || '[]');
+      allGymLogs = JSON.parse(localStorage.getItem('todo_local_gym_logs') || '[]');
+      allGymPEx = JSON.parse(localStorage.getItem('todo_local_gym_pex') || '[]');
+      allGymPLogs = JSON.parse(localStorage.getItem('todo_local_gym_plogs') || '[]');
+    } catch (e) { allTasks = []; allFolders = []; allWeights = []; allGymExercises = []; allGymLogs = []; allGymPEx = []; allGymPLogs = []; }
+  }
+  function goLocalMode() {
+    if (usingLocal) return;
+    usingLocal = true;
+    syncDot.className = 'off';
+    syncDot.title = 'sync unavailable — data stored only on this device';
+    loadLocal();
+    seedGymExercisesIfEmpty();
+    renderAll();
+  }
+
+  async function init() {
+    try {
+      const db = await SyncDB.open();
+      if (!db) { goLocalMode(); return; }
+      tasksCol = db.collection('tasks');
+      foldersCol = db.collection('folders');
+      subtasksCol = db.collection('subtasks');
+      weightsCol = db.collection('weights');
+      gymExercisesCol = db.collection('gymExercises');
+      gymLogsCol = db.collection('gymLogs');
+      gymPExCol = db.collection('gymProgressExercises');
+      gymPLogsCol = db.collection('gymProgressLogs');
+      tasksCol.orderBy('createdAt', 'asc').onSnapshot(
+        snap => { allTasks = snap.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); },
+        () => goLocalMode()
+      );
+      foldersCol.orderBy('createdAt', 'asc').onSnapshot(
+        snap => { allFolders = snap.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); },
+        () => goLocalMode()
+      );
+      subtasksCol.orderBy('order', 'asc').onSnapshot(
+        snap => { allSubtasks = snap.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); },
+        () => goLocalMode()
+      );
+      weightsCol.orderBy('date', 'asc').onSnapshot(
+        snap => { allWeights = snap.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); },
+        () => goLocalMode()
+      );
+      gymExercisesCol.orderBy('order', 'asc').onSnapshot(
+        snap => { allGymExercises = snap.docs.map(d => ({ id: d.id, ...d.data() })); seedGymExercisesIfEmpty(); renderAll(); },
+        () => goLocalMode()
+      );
+      gymLogsCol.orderBy('date', 'asc').onSnapshot(
+        snap => { allGymLogs = snap.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); },
+        () => goLocalMode()
+      );
+      gymPExCol.orderBy('order', 'asc').onSnapshot(
+        snap => { allGymPEx = snap.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); },
+        () => goLocalMode()
+      );
+      gymPLogsCol.orderBy('date', 'asc').onSnapshot(
+        snap => { allGymPLogs = snap.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); },
+        () => goLocalMode()
+      );
+    } catch (e) {
+      goLocalMode();
+    }
+  }
+
+  init();
+
+  // ---------- sync UI ----------
+  (function () {
+    const modal = document.getElementById('sync-modal');
+    const st = document.getElementById('sync-status');
+    const f = id => document.getElementById(id);
+    const dotClass = { ok: 'ok', error: 'off', pending: 'pending', offline: 'offline', none: '' };
+    SyncDB.onStatus(s => {
+      syncDot.className = dotClass[s.state] || '';
+      syncDot.title = s.msg;
+      let t = s.msg;
+      if (s.last && s.state !== 'pending') t += ' (last sync ' + new Date(s.last).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) + ')';
+      st.textContent = t;
+      st.className = s.state === 'error' ? 'error' : '';
+    });
+    function openModal() {
+      const c = SyncDB.getConfig() || {};
+      f('sc-owner').value = c.owner || '';
+      f('sc-repo').value = c.repo || '';
+      f('sc-path').value = c.path || 'data.json';
+      f('sc-token').value = c.token || '';
+      modal.classList.add('open');
+    }
+    f('sync-btn').addEventListener('click', openModal);
+    f('sc-close').addEventListener('click', () => modal.classList.remove('open'));
+    modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('open'); });
+    f('sc-save').addEventListener('click', () => {
+      const cfg = { owner: f('sc-owner').value.trim(), repo: f('sc-repo').value.trim(), path: f('sc-path').value.trim() || 'data.json', token: f('sc-token').value.trim() };
+      if (!cfg.owner || !cfg.repo || !cfg.token) { st.textContent = 'Fill in username, repo and token'; st.className = 'error'; return; }
+      SyncDB.configure(cfg);
+    });
+    f('sc-now').addEventListener('click', () => SyncDB.sync());
+    f('sc-off').addEventListener('click', () => { if (confirm('Stop syncing on this device? Data stays here.')) SyncDB.disconnect(); });
+    f('sc-export').addEventListener('click', () => {
+      const blob = new Blob([SyncDB.exportJSON()], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'tgrapp-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    });
+  })();
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+  }
+
+  renderAll();
+</script>
+</body>
+</html>
