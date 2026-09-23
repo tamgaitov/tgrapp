@@ -222,6 +222,8 @@
 
   window.SyncDB = {
     open,
+    collection,
+    isReady: () => ready,
     sync: () => scheduleSync(0),
     getConfig: getCfg,
     configure(cfg) {

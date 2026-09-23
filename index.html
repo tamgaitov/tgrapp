@@ -792,7 +792,7 @@
     const wrap = document.createElement('div');
 
     const row = document.createElement('div');
-    row.className = 'tree-row' + (currentFolderId === folder.id ? ' active' : '');
+    row.className = 'tree-row' + (currentPage === 'todo' && currentFolderId === folder.id ? ' active' : '');
     row.style.paddingLeft = (6 + depth * 15) + 'px';
 
     const kids = childrenOf(folder.id);
@@ -903,7 +903,7 @@
     const rootExpanded = expanded.has('__root__');
 
     const todoRow = document.createElement('div');
-    todoRow.className = 'tree-row' + (currentFolderId === null ? ' active' : '');
+    todoRow.className = 'tree-row' + (currentPage === 'todo' && currentFolderId === null ? ' active' : '');
     todoRow.style.paddingLeft = '6px';
 
     const todoIcon = document.createElement('span');
@@ -998,6 +998,7 @@
       progRow.addEventListener('click', () => navigateGymTab('progress'));
       sidebarListEl.appendChild(progRow);
     }
+    if (window.renderExtraSidebar) window.renderExtraSidebar(sidebarListEl);
   }
 
   rootAddBtn.addEventListener('click', () => {
@@ -1009,6 +1010,7 @@
   // ---------- breadcrumbs ----------
   function renderBreadcrumbs() {
     breadcrumbsEl.innerHTML = '';
+    if (window.renderExtraBreadcrumbs && window.renderExtraBreadcrumbs(breadcrumbsEl)) return;
     if (currentPage === 'weight') {
       const c = document.createElement('span');
       c.className = 'crumb current';
@@ -1336,6 +1338,7 @@
     if (currentPage === 'todo') renderTasks();
     else if (currentPage === 'weight') renderWeightPage();
     else if (currentPage === 'gym') renderGymPage();
+    if (window.renderExtraPages) window.renderExtraPages();
   }
 
   // ---------- weight page ----------
@@ -2080,5 +2083,6 @@
 
   renderAll();
 </script>
+<script src="./extras.js"></script>
 </body>
 </html>

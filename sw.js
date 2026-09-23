@@ -1,6 +1,6 @@
 // Offline cache. Bump VERSION after changing app files so devices pick up the update.
-const VERSION = 'tgrapp-v1';
-const FILES = ['./', './index.html', './sync-db.js', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
+const VERSION = 'tgrapp-v2';
+const FILES = ['./', './index.html', './sync-db.js', './extras.js', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
