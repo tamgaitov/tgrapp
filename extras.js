@@ -243,6 +243,10 @@
   .tree-row .row-actions { display: none !important; }
   .tree-row { -webkit-touch-callout: none; }
   #n-menu button.danger { color: #ef6a6a; }
+  .row-more { background: none; border: none; color: var(--sidebar-text-dim); width: 24px; height: 22px; border-radius: 6px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: .45; padding: 0; margin-left: 2px; }
+  .tree-row:hover .row-more, .row-more:focus-visible { opacity: 1; }
+  .row-more:hover { background: rgba(255,255,255,.12); color: #fff; }
   #n-menu button svg { flex-shrink: 0; opacity: .8; }
   :root[data-theme="skyrim"] .n-title { font-family: 'Cinzel', Georgia, serif; }
   @media (max-width: 520px) { .t-stats { grid-template-columns: repeat(2, 1fr); } .t-grid { gap: 4px; } }
@@ -361,7 +365,7 @@
   const ctxMenu = el('div'); ctxMenu.id = 'n-menu'; document.body.appendChild(ctxMenu);
   const closeCtx = () => ctxMenu.classList.remove('open');
   let ctxOpenedAt = 0;
-  document.addEventListener('click', e => { if (ctxMenu.classList.contains('open') && !ctxMenu.contains(e.target) && Date.now() - ctxOpenedAt > 450) closeCtx(); }, true);
+  document.addEventListener('click', e => { if (ctxMenu.classList.contains('open') && !ctxMenu.contains(e.target) && !e.target.closest('.row-more') && Date.now() - ctxOpenedAt > 450) closeCtx(); }, true);
   document.addEventListener('scroll', closeCtx, true);
   window.addEventListener('resize', closeCtx);
   const MENU_ICONS = {
@@ -370,7 +374,7 @@
     board: () => I.territory
   };
   function openCtxMenu(x, y, items) {
-    ctxMenu.innerHTML = '';
+    ctxMenu.innerHTML = ''; ctxMenu.dataset.owner = '';
     items.forEach(it => {
       const b = el('button', it.danger ? 'danger' : null, (MENU_ICONS[it.icon] ? MENU_ICONS[it.icon]() : '') + '<span>' + esc(it.label) + '</span>');
       b.addEventListener('click', e => { e.stopPropagation(); closeCtx(); it.action(); });
@@ -382,9 +386,23 @@
     ctxMenu.style.top = Math.max(8, Math.min(y, window.innerHeight - h - 8)) + 'px';
   }
   const isTouch = window.matchMedia('(hover: none)').matches;
+  let moreSeq = 0;
+  const sidebarEl = document.getElementById('sidebar');
+  if (sidebarEl) sidebarEl.addEventListener('contextmenu', e => { if (!e.target.closest('input, textarea')) e.preventDefault(); });
   function attachRowMenu(rowEl, getItems) {
     const items = () => (typeof getItems === 'function' ? getItems() : getItems);
     if (isTouch) rowEl.draggable = false;
+    const more = el('button', 'row-more', '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="3.5" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="12.5" cy="8" r="1.4"/></svg>');
+    more.title = 'Actions'; more.setAttribute('aria-label', 'Actions');
+    more.addEventListener('click', e => {
+      e.stopPropagation();
+      if (ctxMenu.classList.contains('open') && ctxMenu.dataset.owner === String(moreId)) { closeCtx(); return; }
+      const r = more.getBoundingClientRect();
+      openCtxMenu(r.right - 170, r.bottom + 4, items());
+      ctxMenu.dataset.owner = String(moreId);
+    });
+    const moreId = ++moreSeq;
+    rowEl.appendChild(more);
     rowEl.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); openCtxMenu(e.clientX, e.clientY, items()); });
     let timer = null, sx = 0, sy = 0, fired = false;
     rowEl.addEventListener('touchstart', e => {
@@ -1348,7 +1366,7 @@
   }
   applyTheme((() => { try { return localStorage.getItem('tgr_theme'); } catch (e) { return null; } })());
 
-  const APP_VERSION = '6';
+  const APP_VERSION = '7';
   async function checkForUpdates(btn, msg) {
     btn.disabled = true; btn.textContent = 'Checking...';
     try {
