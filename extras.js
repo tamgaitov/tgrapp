@@ -240,7 +240,10 @@
   #n-menu button { display: flex; align-items: center; gap: 8px; background: none; border: none; color: #e6e7ea; font-size: 13.5px;
     padding: 8px 10px; border-radius: 7px; cursor: pointer; text-align: left; font-family: inherit; }
   #n-menu button:hover { background: rgba(255,255,255,.08); }
-  @media (hover: none) { .row-actions { opacity: 1 !important; } }
+  .tree-row .row-actions { display: none !important; }
+  .tree-row { -webkit-touch-callout: none; }
+  #n-menu button.danger { color: #ef6a6a; }
+  #n-menu button svg { flex-shrink: 0; opacity: .8; }
   :root[data-theme="skyrim"] .n-title { font-family: 'Cinzel', Georgia, serif; }
   @media (max-width: 520px) { .t-stats { grid-template-columns: repeat(2, 1fr); } .t-grid { gap: 4px; } }
   `;
@@ -354,23 +357,55 @@
   nFoldersCol.orderBy('createdAt', 'asc').onSnapshot(s => { nFolders = s.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); });
   notesCol.orderBy('createdAt', 'asc').onSnapshot(s => { notes = s.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); });
 
-  const nMenu = el('div'); nMenu.id = 'n-menu'; document.body.appendChild(nMenu);
-  document.addEventListener('click', e => { if (nMenu.classList.contains('open') && !nMenu.contains(e.target)) nMenu.classList.remove('open'); });
-  function openNotesMenu(anchor, folderId) {
-    nMenu.innerHTML = '';
-    const a = el('button', null, I.note + '<span>New note</span>');
-    a.addEventListener('click', e => { e.stopPropagation(); nMenu.classList.remove('open'); newNote(folderId); });
-    const b = el('button', null, I.folder + '<span>New folder</span>');
-    b.addEventListener('click', e => {
-      e.stopPropagation(); nMenu.classList.remove('open');
-      expanded.add('__notes__'); if (folderId) expanded.add('nf:' + folderId); saveExpanded();
-      nState.creatingIn = folderId || null; renderTree();
+  // ---------- context menu (right click on desktop, long press on phone) ----------
+  const ctxMenu = el('div'); ctxMenu.id = 'n-menu'; document.body.appendChild(ctxMenu);
+  const closeCtx = () => ctxMenu.classList.remove('open');
+  let ctxOpenedAt = 0;
+  document.addEventListener('click', e => { if (ctxMenu.classList.contains('open') && !ctxMenu.contains(e.target) && Date.now() - ctxOpenedAt > 450) closeCtx(); }, true);
+  document.addEventListener('scroll', closeCtx, true);
+  window.addEventListener('resize', closeCtx);
+  const MENU_ICONS = {
+    folder: () => I.folder, note: () => I.note, trash: () => I.trash,
+    icon: () => '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M8 1.8L9.8 5.7L14 6.1L10.8 8.9L11.8 13L8 10.8L4.2 13L5.2 8.9L2 6.1L6.2 5.7Z"/></svg>',
+    board: () => I.territory
+  };
+  function openCtxMenu(x, y, items) {
+    ctxMenu.innerHTML = '';
+    items.forEach(it => {
+      const b = el('button', it.danger ? 'danger' : null, (MENU_ICONS[it.icon] ? MENU_ICONS[it.icon]() : '') + '<span>' + esc(it.label) + '</span>');
+      b.addEventListener('click', e => { e.stopPropagation(); closeCtx(); it.action(); });
+      ctxMenu.appendChild(b);
     });
-    nMenu.appendChild(a); nMenu.appendChild(b);
-    const r = anchor.getBoundingClientRect();
-    nMenu.style.top = Math.min(r.bottom + 4, window.innerHeight - 100) + 'px';
-    nMenu.style.left = Math.max(8, Math.min(r.left - 120, window.innerWidth - 170)) + 'px';
-    nMenu.classList.add('open');
+    ctxMenu.classList.add('open');
+    const w = ctxMenu.offsetWidth, h = ctxMenu.offsetHeight;
+    ctxMenu.style.left = Math.max(8, Math.min(x, window.innerWidth - w - 8)) + 'px';
+    ctxMenu.style.top = Math.max(8, Math.min(y, window.innerHeight - h - 8)) + 'px';
+  }
+  const isTouch = window.matchMedia('(hover: none)').matches;
+  function attachRowMenu(rowEl, getItems) {
+    const items = () => (typeof getItems === 'function' ? getItems() : getItems);
+    if (isTouch) rowEl.draggable = false;
+    rowEl.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); openCtxMenu(e.clientX, e.clientY, items()); });
+    let timer = null, sx = 0, sy = 0, fired = false;
+    rowEl.addEventListener('touchstart', e => {
+      const t = e.touches[0]; sx = t.clientX; sy = t.clientY; fired = false;
+      clearTimeout(timer);
+      timer = setTimeout(() => { fired = true; if (navigator.vibrate) navigator.vibrate(12); openCtxMenu(sx, sy, items()); ctxOpenedAt = Date.now(); }, 480);
+    }, { passive: true });
+    rowEl.addEventListener('touchmove', e => { const t = e.touches[0]; if (Math.hypot(t.clientX - sx, t.clientY - sy) > 10) clearTimeout(timer); }, { passive: true });
+    rowEl.addEventListener('touchend', e => { clearTimeout(timer); if (fired) e.preventDefault(); });
+    rowEl.addEventListener('touchcancel', () => clearTimeout(timer));
+    rowEl.addEventListener('click', e => { if (fired) { fired = false; e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+  }
+  window.attachRowMenu = attachRowMenu;
+  function notesMenuItems(folderId) {
+    return [
+      { label: 'New note', icon: 'note', action: () => newNote(folderId) },
+      { label: 'New folder', icon: 'folder', action: () => {
+        expanded.add('__notes__'); if (folderId) expanded.add('nf:' + folderId); saveExpanded();
+        nState.creatingIn = folderId || null; renderTree();
+      } }
+    ];
   }
   function newNote(folderId) {
     const now = Date.now();
@@ -417,7 +452,7 @@
       list.appendChild(row({
         icon: I.folder, name: f.name, indent, chevron: hasKids ? open : null,
         onClick: () => { if (open) expanded.delete(key); else expanded.add(key); saveExpanded(); renderTree(); },
-        addTitle: 'New note or folder', onAdd: b => openNotesMenu(b, f.id), onDelete: () => deleteNoteFolder(f)
+        menu: () => notesMenuItems(f.id).concat([{ label: 'Delete folder', icon: 'trash', danger: true, action: () => deleteNoteFolder(f) }])
       }));
       if (open) renderNotesTree(list, f.id, depth + 1);
     });
@@ -425,7 +460,7 @@
       list.appendChild(row({
         icon: I.note, name: n.title || 'Untitled', indent: indent + 14,
         active: currentPage === 'notes' && nState.noteId === n.id,
-        onClick: () => goNote(n.id), onDelete: () => deleteNote(n)
+        onClick: () => goNote(n.id), menu: () => [{ label: 'Delete note', icon: 'trash', danger: true, action: () => deleteNote(n) }]
       }));
     });
     if (nState.creatingIn !== undefined && (nState.creatingIn || null) === (parentId || null)) list.appendChild(folderForm(parentId, indent + 14));
@@ -525,7 +560,8 @@
         '<svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M5 3L11 8L5 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
       r.insertBefore(ch, ic);
     }
-    if (opts.onAdd || opts.onDelete) {
+    if (opts.menu) attachRowMenu(r, opts.menu);
+    if (false) {
       const acts = el('div', 'row-actions');
       if (opts.onAdd) {
         const b = el('button', null, I.plus); b.title = opts.addTitle || 'Add';
@@ -549,7 +585,7 @@
     list.appendChild(row({
       icon: I.notes, name: 'Notes', bold: true,
       onClick: () => { if (nOpen) expanded.delete('__notes__'); else expanded.add('__notes__'); saveExpanded(); renderTree(); },
-      addTitle: 'New note or folder', onAdd: b => openNotesMenu(b, null)
+      menu: () => notesMenuItems(null)
     }));
     if (nOpen) renderNotesTree(list, null, 1);
     const tOpen = expanded.has('__terr__');
@@ -557,15 +593,18 @@
       icon: I.territory, name: 'Territory progress', bold: true,
       active: currentPage === 'territory' && !tState.boardId,
       onClick: () => { if (tOpen) expanded.delete('__terr__'); else expanded.add('__terr__'); saveExpanded(); renderTree(); },
-      addTitle: 'New board',
-      onAdd: () => { expanded.add('__terr__'); saveExpanded(); tState.creating = true; goTerritory(null); }
+      menu: () => [
+        { label: 'New board', icon: 'board', action: () => { expanded.add('__terr__'); saveExpanded(); tState.creating = true; goTerritory(null); } },
+        { label: 'All boards', icon: 'board', action: () => goTerritory(null) }
+      ]
     }));
     if (tOpen) {
       boards.slice().sort((a, b) => (a.order || 0) - (b.order || 0)).forEach(b => {
         list.appendChild(row({
           icon: iconSVG(b.icon || 'target', 14), name: b.name, indent: 27, meta: cellsOf(b.id).length,
           active: currentPage === 'territory' && tState.boardId === b.id,
-          onClick: () => goTerritory(b.id)
+          onClick: () => goTerritory(b.id),
+          menu: () => [{ label: 'Delete board', icon: 'trash', danger: true, action: () => deleteBoard(b) }]
         }));
       });
     }
@@ -1309,7 +1348,7 @@
   }
   applyTheme((() => { try { return localStorage.getItem('tgr_theme'); } catch (e) { return null; } })());
 
-  const APP_VERSION = '5';
+  const APP_VERSION = '6';
   async function checkForUpdates(btn, msg) {
     btn.disabled = true; btn.textContent = 'Checking...';
     try {

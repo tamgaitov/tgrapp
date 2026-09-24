@@ -867,6 +867,11 @@
     row.appendChild(nameSpan);
     row.appendChild(actions);
     row.addEventListener('click', () => navigateTo(folder.id));
+    if (window.attachRowMenu) window.attachRowMenu(row, () => [
+      { label: 'New subfolder', icon: 'folder', action: () => { expanded.add(folder.id); saveExpanded(); creatingUnderParent = folder.id; renderTree(); } },
+      { label: 'Change icon', icon: 'icon', action: () => openIconPopover(iconSpan, (ic) => updateFolderIcon(folder.id, ic)) },
+      { label: 'Delete folder', icon: 'trash', danger: true, action: () => { if (confirm('Delete folder "' + folder.name + '" and everything inside it?')) deleteFolder(folder.id); } }
+    ]);
 
     row.draggable = true;
     row.addEventListener('dragstart', (e) => {
@@ -943,6 +948,9 @@
       saveExpanded();
       renderTree();
     });
+    if (window.attachRowMenu) window.attachRowMenu(todoRow, () => [
+      { label: 'New folder', icon: 'folder', action: () => { expanded.add('__root__'); saveExpanded(); creatingUnderParent = null; renderTree(); } }
+    ]);
     sidebarListEl.appendChild(todoRow);
 
     if (rootExpanded) {
