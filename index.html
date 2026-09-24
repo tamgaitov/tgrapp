@@ -938,11 +938,10 @@
     todoRow.appendChild(todoIcon);
     todoRow.appendChild(todoName);
     todoRow.addEventListener('click', () => {
-      if (rootChildren.length) {
-        if (rootExpanded) expanded.delete('__root__'); else expanded.add('__root__');
-        saveExpanded();
-      }
-      navigateTo(null);
+      if (!rootChildren.length) { navigateTo(null); return; }
+      if (rootExpanded) expanded.delete('__root__'); else expanded.add('__root__');
+      saveExpanded();
+      renderTree();
     });
     sidebarListEl.appendChild(todoRow);
 
@@ -987,7 +986,7 @@
     gymRow.addEventListener('click', () => {
       if (gymExpanded) expanded.delete('__gym__'); else expanded.add('__gym__');
       saveExpanded();
-      navigateGymTab('plan');
+      renderTree();
     });
     sidebarListEl.appendChild(gymRow);
 

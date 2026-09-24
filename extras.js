@@ -222,6 +222,26 @@
   :root[data-theme="skyrim"] button[style*="var(--accent)"] { color: #16140f !important; }
   :root[data-theme="skyrim"] .pl-card, :root[data-theme="skyrim"] .t-stats, :root[data-theme="skyrim"] .a-card, :root[data-theme="skyrim"] .t-card {
     box-shadow: inset 0 0 0 1px rgba(196,164,104,.08); }
+
+  /* notes */
+  #page-notes { max-width: 720px; }
+  .n-head { display: flex; gap: 10px; align-items: center; }
+  .n-title { flex: 1; min-width: 0; font-size: 26px; font-weight: 700; background: none; border: none; outline: none; color: var(--text);
+    font-family: inherit; padding: 4px 0; }
+  .n-title::placeholder { color: var(--text-dim); opacity: .6; }
+  .n-meta { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-dim); margin: 2px 0 16px; }
+  .n-meta em { font-style: normal; }
+  .n-body { width: 100%; min-height: 260px; resize: none; background: none; border: none; outline: none; color: var(--text);
+    font-family: inherit; font-size: 16px; line-height: 1.6; padding: 0; overflow: hidden; }
+  .n-body::placeholder { color: var(--text-dim); opacity: .7; }
+  #n-menu { position: fixed; z-index: 1000; background: var(--popover-bg); border: 1px solid rgba(255,255,255,.1); border-radius: 10px;
+    padding: 5px; display: none; flex-direction: column; min-width: 160px; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+  #n-menu.open { display: flex; }
+  #n-menu button { display: flex; align-items: center; gap: 8px; background: none; border: none; color: #e6e7ea; font-size: 13.5px;
+    padding: 8px 10px; border-radius: 7px; cursor: pointer; text-align: left; font-family: inherit; }
+  #n-menu button:hover { background: rgba(255,255,255,.08); }
+  @media (hover: none) { .row-actions { opacity: 1 !important; } }
+  :root[data-theme="skyrim"] .n-title { font-family: 'Cinzel', Georgia, serif; }
   @media (max-width: 520px) { .t-stats { grid-template-columns: repeat(2, 1fr); } .t-grid { gap: 4px; } }
   `;
   const styleEl = document.createElement('style');
@@ -326,6 +346,155 @@
     for (let i = 0; i < 100; i++) if (!used.has(i)) return fillCell(b, i);
   }
 
+  // ================= notes =================
+  const nFoldersCol = SyncDB.collection('noteFolders');
+  const notesCol = SyncDB.collection('notes');
+  let nFolders = [], notes = [];
+  let nState = { noteId: null, creatingIn: undefined };
+  nFoldersCol.orderBy('createdAt', 'asc').onSnapshot(s => { nFolders = s.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); });
+  notesCol.orderBy('createdAt', 'asc').onSnapshot(s => { notes = s.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); });
+
+  const nMenu = el('div'); nMenu.id = 'n-menu'; document.body.appendChild(nMenu);
+  document.addEventListener('click', e => { if (nMenu.classList.contains('open') && !nMenu.contains(e.target)) nMenu.classList.remove('open'); });
+  function openNotesMenu(anchor, folderId) {
+    nMenu.innerHTML = '';
+    const a = el('button', null, I.note + '<span>New note</span>');
+    a.addEventListener('click', e => { e.stopPropagation(); nMenu.classList.remove('open'); newNote(folderId); });
+    const b = el('button', null, I.folder + '<span>New folder</span>');
+    b.addEventListener('click', e => {
+      e.stopPropagation(); nMenu.classList.remove('open');
+      expanded.add('__notes__'); if (folderId) expanded.add('nf:' + folderId); saveExpanded();
+      nState.creatingIn = folderId || null; renderTree();
+    });
+    nMenu.appendChild(a); nMenu.appendChild(b);
+    const r = anchor.getBoundingClientRect();
+    nMenu.style.top = Math.min(r.bottom + 4, window.innerHeight - 100) + 'px';
+    nMenu.style.left = Math.max(8, Math.min(r.left - 120, window.innerWidth - 170)) + 'px';
+    nMenu.classList.add('open');
+  }
+  function newNote(folderId) {
+    const now = Date.now();
+    expanded.add('__notes__'); if (folderId) expanded.add('nf:' + folderId); saveExpanded();
+    notesCol.add({ title: '', body: '', folderId: folderId || null, createdAt: now, updatedAt: now }).then(r => { focusTitle = true; goNote(r.id); });
+  }
+  function nChildren(parentId) { return nFolders.filter(f => (f.parentId || null) === (parentId || null)).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ru')); }
+  function nNotesIn(folderId) { return notes.filter(n => (n.folderId || null) === (folderId || null)); }
+  function deleteNoteFolder(f) {
+    const fids = [], walk = id => { fids.push(id); nChildren(id).forEach(c => walk(c.id)); };
+    walk(f.id);
+    const inside = notes.filter(n => fids.includes(n.folderId));
+    if (!confirm('Delete folder "' + f.name + '"' + (inside.length ? ' and ' + inside.length + ' notes inside' : '') + '?')) return;
+    inside.forEach(n => notesCol.doc(n.id).delete());
+    fids.forEach(id => nFoldersCol.doc(id).delete());
+    if (inside.some(n => n.id === nState.noteId)) nState.noteId = null;
+  }
+  function deleteNote(n) {
+    if (!confirm('Delete note "' + (n.title || 'Untitled') + '"?')) return;
+    notesCol.doc(n.id).delete();
+    if (nState.noteId === n.id) { nState.noteId = null; renderAll(); }
+  }
+  function folderForm(parentId, indent) {
+    const r = el('div', 'inline-form-row'); r.style.paddingLeft = indent + 'px';
+    const inp = el('input', 'fname'); inp.placeholder = 'folder name...';
+    const ok = el('button', 'fok', '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.5L13 4.5" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+    const done = () => {
+      const name = inp.value.trim(); nState.creatingIn = undefined;
+      if (name) nFoldersCol.add({ name, parentId: parentId || null, createdAt: Date.now() }).then(x => { expanded.add('nf:' + x.id); saveExpanded(); });
+      renderTree();
+    };
+    ok.addEventListener('click', e => { e.stopPropagation(); done(); });
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') done(); if (e.key === 'Escape') { nState.creatingIn = undefined; renderTree(); } });
+    inp.addEventListener('click', e => e.stopPropagation());
+    r.appendChild(inp); r.appendChild(ok);
+    setTimeout(() => inp.focus(), 30);
+    return r;
+  }
+  function renderNotesTree(list, parentId, depth) {
+    const indent = 6 + depth * 15;
+    nChildren(parentId).forEach(f => {
+      const key = 'nf:' + f.id, open = expanded.has(key);
+      const hasKids = nChildren(f.id).length || nNotesIn(f.id).length;
+      list.appendChild(row({
+        icon: I.folder, name: f.name, indent, chevron: hasKids ? open : null,
+        onClick: () => { if (open) expanded.delete(key); else expanded.add(key); saveExpanded(); renderTree(); },
+        addTitle: 'New note or folder', onAdd: b => openNotesMenu(b, f.id), onDelete: () => deleteNoteFolder(f)
+      }));
+      if (open) renderNotesTree(list, f.id, depth + 1);
+    });
+    nNotesIn(parentId).forEach(n => {
+      list.appendChild(row({
+        icon: I.note, name: n.title || 'Untitled', indent: indent + 14,
+        active: currentPage === 'notes' && nState.noteId === n.id,
+        onClick: () => goNote(n.id), onDelete: () => deleteNote(n)
+      }));
+    });
+    if (nState.creatingIn !== undefined && (nState.creatingIn || null) === (parentId || null)) list.appendChild(folderForm(parentId, indent + 14));
+  }
+  function goNote(id) { currentPage = 'notes'; nState.noteId = id; renderAll(); autoCollapseOnMobile(); }
+
+  let focusTitle = false, saveTimer = null;
+  const pageN = document.createElement('div'); pageN.id = 'page-notes'; pageN.className = 'page-wrap'; pageN.style.display = 'none';
+  contentEl.appendChild(pageN);
+  function notePath(n) {
+    const chain = []; let fid = n.folderId;
+    while (fid) { const f = nFolders.find(x => x.id === fid); if (!f) break; chain.unshift(f); fid = f.parentId; }
+    return chain;
+  }
+  function fmtEdited(ts) {
+    const d = new Date(ts), now = new Date();
+    const t = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    return dayStr(d) === dayStr(now) ? 'today, ' + t : fmtDay(dayStr(d)) + ', ' + t;
+  }
+  function renderNote() {
+    const n = notes.find(x => x.id === nState.noteId);
+    if (!n) {
+      pageN.dataset.noteId = '';
+      pageN.innerHTML = '';
+      const e = el('div', 'x-empty'); e.textContent = notes.length ? 'Pick a note on the left.' : 'No notes yet.';
+      const b = el('button', 'x-btn primary'); b.textContent = 'New note'; b.style.marginTop = '12px';
+      b.addEventListener('click', () => newNote(null));
+      e.appendChild(el('br')); e.appendChild(b);
+      pageN.appendChild(e);
+      return;
+    }
+    if (pageN.dataset.noteId === n.id && pageN.querySelector('.n-body')) {
+      // same note already open: update only what the user is not editing
+      const ti = pageN.querySelector('.n-title'), bo = pageN.querySelector('.n-body');
+      if (document.activeElement !== ti && ti.value !== (n.title || '')) ti.value = n.title || '';
+      if (document.activeElement !== bo && bo.value !== (n.body || '')) { bo.value = n.body || ''; grow(bo); }
+      if (!saveTimer) pageN.querySelector('.n-meta span').textContent = 'Edited ' + fmtEdited(n.updatedAt || n.createdAt);
+      return;
+    }
+    pageN.dataset.noteId = n.id;
+    pageN.innerHTML = '';
+    const head = el('div', 'n-head');
+    const ti = el('input', 'n-title'); ti.placeholder = 'Untitled'; ti.value = n.title || ''; ti.maxLength = 120;
+    const del = el('button', 'x-btn ghost-danger'); del.textContent = 'Delete';
+    del.addEventListener('click', () => deleteNote(n));
+    head.appendChild(ti); head.appendChild(del);
+    const meta = el('div', 'n-meta');
+    const path = notePath(n).map(f => esc(f.name)).join(' / ');
+    meta.innerHTML = (path ? '<em>' + path + '</em>' : '') + '<span>Edited ' + fmtEdited(n.updatedAt || n.createdAt) + '</span>';
+    const bo = el('textarea', 'n-body'); bo.placeholder = 'Start writing...'; bo.value = n.body || '';
+    pageN.appendChild(head); pageN.appendChild(meta); pageN.appendChild(bo);
+    const status = meta.querySelector('span');
+    const save = () => {
+      status.textContent = 'Saving...';
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        saveTimer = null;
+        notesCol.doc(n.id).update({ title: ti.value, body: bo.value, updatedAt: Date.now() });
+        status.textContent = 'Saved';
+      }, 500);
+    };
+    ti.addEventListener('input', save);
+    bo.addEventListener('input', () => { grow(bo); save(); });
+    ti.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); bo.focus(); } });
+    requestAnimationFrame(() => grow(bo));
+    if (focusTitle) { focusTitle = false; setTimeout(() => ti.focus(), 30); }
+  }
+  function grow(t) { t.style.height = 'auto'; t.style.height = Math.max(260, t.scrollHeight + 4) + 'px'; }
+
   // ================= navigation =================
   function goTerritory(boardId) { currentPage = 'territory'; tState.boardId = boardId || null; renderAll(); autoCollapseOnMobile(); }
   function goAch(tab) { currentPage = 'achievements'; aTab = tab; renderAll(); autoCollapseOnMobile(); }
@@ -337,6 +506,10 @@
     shelf: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" style="vertical-align:-2px"><rect x="2" y="1.5" width="12" height="13" rx="1.2"/><path d="M2 8H14"/><path d="M5 8V5.5M8 8V4.5M11 8V6"/><path d="M5.5 14.5V12M9.5 14.5V11.5"/></svg>',
     list: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" style="vertical-align:-2px"><circle cx="3.5" cy="4" r="1"/><circle cx="3.5" cy="8" r="1"/><circle cx="3.5" cy="12" r="1"/><path d="M6.5 4H13M6.5 8H13M6.5 12H13"/></svg>',
     brush: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M5 2.5H11V5.5C11 7.5 9.7 8.8 8 8.8C6.3 8.8 5 7.5 5 5.5Z"/><path d="M8 8.8V11M5.8 13.5H10.2L9.8 11H6.2Z"/><path d="M12.5 1.5L13 2.7L14.2 3.2L13 3.7L12.5 4.9L12 3.7L10.8 3.2L12 2.7Z" fill="currentColor"/></svg>',
+    trash: '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 4H13M6.5 4V2.7C6.5 2.3 6.8 2 7.2 2H8.8C9.2 2 9.5 2.3 9.5 2.7V4M5 4V12.5C5 13 5.4 13.4 5.9 13.4H10.1C10.6 13.4 11 13 11 12.5V4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    notes: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M6 3H15L19 7V21H6Z"/><path d="M15 3V7H19"/><path d="M9 11H16M9 14.5H16M9 18H13"/></svg>',
+    note: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M4 1.8H10L12.5 4.3V14.2H4Z"/><path d="M6 7.5H10.5M6 10H10.5"/></svg>',
+    folder: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 6.5C3 5.7 3.7 5 4.5 5H9L11 7H19.5C20.3 7 21 7.7 21 8.5V17.5C21 18.3 20.3 19 19.5 19H4.5C3.7 19 3 18.3 3 17.5Z"/></svg>',
     plus: '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>'
   };
   function row(opts) {
@@ -347,11 +520,24 @@
     if (opts.bold) nm.style.fontWeight = '700';
     r.appendChild(ic); r.appendChild(nm);
     if (opts.meta != null) { const m = el('span', null); m.textContent = opts.meta; m.style.cssText = 'font-size:11.5px;color:var(--sidebar-text-dim);padding-right:4px'; r.appendChild(m); }
-    if (opts.onAdd) {
+    if (opts.chevron !== undefined) {
+      const ch = el('span', 'chevron' + (opts.chevron ? ' expanded' : '') + (opts.chevron === null ? ' spacer' : ''),
+        '<svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M5 3L11 8L5 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+      r.insertBefore(ch, ic);
+    }
+    if (opts.onAdd || opts.onDelete) {
       const acts = el('div', 'row-actions');
-      const b = el('button', null, I.plus); b.title = opts.addTitle || 'Add';
-      b.addEventListener('click', e => { e.stopPropagation(); opts.onAdd(); });
-      acts.appendChild(b); r.appendChild(acts);
+      if (opts.onAdd) {
+        const b = el('button', null, I.plus); b.title = opts.addTitle || 'Add';
+        b.addEventListener('click', e => { e.stopPropagation(); opts.onAdd(b); });
+        acts.appendChild(b);
+      }
+      if (opts.onDelete) {
+        const d = el('button', 'del-action', I.trash); d.title = 'Delete';
+        d.addEventListener('click', e => { e.stopPropagation(); opts.onDelete(); });
+        acts.appendChild(d);
+      }
+      r.appendChild(acts);
     }
     r.addEventListener('click', opts.onClick);
     return r;
@@ -359,11 +545,18 @@
 
   window.renderExtraSidebar = function (list) {
     scheduleAch();
+    const nOpen = expanded.has('__notes__');
+    list.appendChild(row({
+      icon: I.notes, name: 'Notes', bold: true,
+      onClick: () => { if (nOpen) expanded.delete('__notes__'); else expanded.add('__notes__'); saveExpanded(); renderTree(); },
+      addTitle: 'New note or folder', onAdd: b => openNotesMenu(b, null)
+    }));
+    if (nOpen) renderNotesTree(list, null, 1);
     const tOpen = expanded.has('__terr__');
     list.appendChild(row({
       icon: I.territory, name: 'Territory progress', bold: true,
       active: currentPage === 'territory' && !tState.boardId,
-      onClick: () => { if (tOpen && currentPage === 'territory' && !tState.boardId) expanded.delete('__terr__'); else expanded.add('__terr__'); saveExpanded(); goTerritory(null); },
+      onClick: () => { if (tOpen) expanded.delete('__terr__'); else expanded.add('__terr__'); saveExpanded(); renderTree(); },
       addTitle: 'New board',
       onAdd: () => { expanded.add('__terr__'); saveExpanded(); tState.creating = true; goTerritory(null); }
     }));
@@ -379,7 +572,7 @@
     const aOpen = expanded.has('__ach__');
     list.appendChild(row({
       icon: I.trophy, name: 'Achievements', bold: true,
-      onClick: () => { if (aOpen) expanded.delete('__ach__'); else expanded.add('__ach__'); saveExpanded(); goAch(aTab); }
+      onClick: () => { if (aOpen) expanded.delete('__ach__'); else expanded.add('__ach__'); saveExpanded(); renderTree(); }
     }));
     if (aOpen) {
       list.appendChild(row({ icon: I.shelf, name: 'My achievements', indent: 27, active: currentPage === 'achievements' && aTab === 'mine', onClick: () => goAch('mine') }));
@@ -389,7 +582,7 @@
   };
 
   window.renderExtraBreadcrumbs = function (bc) {
-    if (currentPage !== 'territory' && currentPage !== 'achievements') return false;
+    if (currentPage !== 'territory' && currentPage !== 'achievements' && currentPage !== 'notes') return false;
     bc.innerHTML = '';
     const crumb = (text, current, onClick) => {
       const c = el('span', 'crumb' + (current ? ' current' : '')); c.textContent = text;
@@ -397,6 +590,12 @@
       bc.appendChild(c);
     };
     const sep = () => { const s = el('span', 'crumb-sep'); s.textContent = '/'; bc.appendChild(s); };
+    if (currentPage === 'notes') {
+      const n = notes.find(x => x.id === nState.noteId);
+      crumb('Notes', !n);
+      if (n) { notePath(n).forEach(f => { sep(); crumb(f.name, false); }); sep(); crumb(n.title || 'Untitled', true); }
+      return true;
+    }
     if (currentPage === 'territory') {
       const b = boards.find(x => x.id === tState.boardId);
       crumb('Territory progress', !b, () => goTerritory(null));
@@ -411,7 +610,10 @@
   window.renderExtraPages = function () {
     pageT.style.display = currentPage === 'territory' ? 'block' : 'none';
     pageA.style.display = currentPage === 'achievements' ? 'block' : 'none';
-    if (currentPage === 'territory') renderTerritory();
+    pageN.style.display = currentPage === 'notes' ? 'block' : 'none';
+    if (currentPage !== 'notes') pageN.dataset.noteId = '';
+    if (currentPage === 'notes') renderNote();
+    else if (currentPage === 'territory') renderTerritory();
     else if (currentPage === 'achievements') renderAchievements();
   };
 
@@ -1107,6 +1309,25 @@
   }
   applyTheme((() => { try { return localStorage.getItem('tgr_theme'); } catch (e) { return null; } })());
 
+  const APP_VERSION = '5';
+  async function checkForUpdates(btn, msg) {
+    btn.disabled = true; btn.textContent = 'Checking...';
+    try {
+      const r = await fetch('./index.html?check=' + Date.now(), { cache: 'no-store' });
+      if (!r.ok) throw new Error();
+    } catch (e) {
+      btn.disabled = false; btn.textContent = 'Check for updates';
+      msg.textContent = 'No connection. Try again when you are online.';
+      return;
+    }
+    try {
+      const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
+      if (reg) await reg.update().catch(() => {});
+      if (window.caches) { const keys = await caches.keys(); await Promise.all(keys.map(k => caches.delete(k))); }
+    } catch (e) {}
+    btn.textContent = 'Reloading...';
+    location.reload();
+  }
   const setModal = el('div'); setModal.id = 'set-modal'; document.body.appendChild(setModal);
   setModal.addEventListener('click', e => { if (e.target === setModal) setModal.classList.remove('open'); });
   function openSettings() {
@@ -1116,6 +1337,9 @@
       <button class="th-system${cur ? '' : ' on'}">Match my device (light or dark)</button>
       <p class="a-m-sub" style="margin:4px 0 0">Sync</p>
       <button class="x-btn" id="set-sync" style="text-align:left">Sync with GitHub</button>
+      <p class="a-m-sub" style="margin:4px 0 0">App</p>
+      <button class="x-btn" id="set-update" style="text-align:left">Check for updates</button>
+      <span class="t-hint" id="set-update-msg">Version ${APP_VERSION}</span>
       <button class="x-btn" id="set-close">Close</button></div>`;
     const grid = setModal.querySelector('.th-grid');
     THEMES.forEach(t => {
@@ -1127,6 +1351,7 @@
     setModal.querySelector('.th-system').addEventListener('click', () => { applyTheme(null); openSettings(); });
     setModal.querySelector('#set-sync').addEventListener('click', () => { setModal.classList.remove('open'); document.getElementById('sync-btn').click(); });
     setModal.querySelector('#set-close').addEventListener('click', () => setModal.classList.remove('open'));
+    setModal.querySelector('#set-update').addEventListener('click', e => checkForUpdates(e.currentTarget, setModal.querySelector('#set-update-msg')));
     setModal.classList.add('open');
   }
   const gear = el('button', 'icon-btn', '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>');
