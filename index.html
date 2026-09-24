@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<script>try{var t=localStorage.getItem('tgr_theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>TGRAPP</title>
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
@@ -284,6 +285,27 @@
   }
   .progress-ex-tile:hover .pex-del { opacity: 1; }
   .progress-ex-tile .pex-del:hover { color: var(--danger); }
+  .pl-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 18px; }
+  .pl-title { font-size: 19px; margin: 0 0 12px; }
+  .pl-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+  .pl-stats div { background: var(--bg); border-radius: 10px; padding: 9px 11px; }
+  .pl-stats b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
+  .pl-stats b small { font-size: 12px; color: var(--text-dim); font-weight: 600; }
+  .pl-stats b.up { color: #33c27a; } .pl-stats b.down { color: var(--danger); }
+  .pl-stats span { font-size: 11.5px; color: var(--text-dim); }
+  .pl-input { display: flex; gap: 8px; align-items: stretch; }
+  .pl-step { width: 44px; flex-shrink: 0; border-radius: 12px; border: 1px solid var(--border); background: var(--bg);
+    color: var(--text); font-size: 20px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .pl-step:hover { border-color: var(--accent); color: var(--accent); }
+  .pl-field { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 12px; padding: 0 14px; cursor: text; }
+  .pl-field:focus-within { border-color: var(--accent); }
+  .pl-field input { flex: 1; min-width: 0; width: 100%; background: none; border: none; outline: none; color: var(--text);
+    font-size: 22px; font-weight: 700; padding: 10px 0; font-family: inherit; font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+  .pl-field input::-webkit-outer-spin-button, .pl-field input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .pl-field span { color: var(--text-dim); font-weight: 600; font-size: 14px; }
+  .pl-add { background: var(--accent); color: #fff; border: none; border-radius: 12px; padding: 0 20px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; }
+  .pl-add:active, .pl-step:active { transform: scale(.97); }
   .back-link { display: inline-flex; align-items: center; gap: 5px; color: var(--text-dim); font-size: 13.5px; cursor: pointer; margin-bottom: 16px; }
   .back-link:hover { color: var(--accent); }
 
@@ -1395,11 +1417,17 @@
       `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="var(--accent)" stroke="var(--bg-elevated)" stroke-width="1.5"><title>${p.v} kg — ${fmtDate(new Date(p.d))}</title></circle>`
     ).join('');
 
+    const lbl = v => (Math.round(v * 10) / 10).toString();
+    const area = pts.length > 1 ? `M${pts[0].x.toFixed(1)},${h - pad} L${linePts.split(' ').join(' L')} L${pts[pts.length - 1].x.toFixed(1)},${h - pad} Z` : '';
     return `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="lcFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".28"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
+      <line x1="${pad}" y1="${pad}" x2="${w - pad}" y2="${pad}" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 4"/>
       <line x1="${pad}" y1="${h - pad}" x2="${w - pad}" y2="${h - pad}" stroke="var(--border)" stroke-width="1"/>
-      <text x="4" y="${pad + 4}" font-size="10" fill="var(--text-dim)">${max.toFixed(1)}</text>
-      <text x="4" y="${h - pad + 4}" font-size="10" fill="var(--text-dim)">${min.toFixed(1)}</text>
-      ${pts.length > 1 ? `<polyline points="${linePts}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>` : ''}
+      <text x="4" y="${pad + 4}" font-size="10" fill="var(--text-dim)">${lbl(max)}</text>
+      <text x="4" y="${h - pad + 4}" font-size="10" fill="var(--text-dim)">${lbl(min)}</text>
+      ${pts.length > 1 ? `<text x="${pad}" y="${h - 10}" font-size="10" fill="var(--text-dim)">${fmtDate(new Date(pts[0].d))}</text><text x="${w - pad}" y="${h - 10}" font-size="10" fill="var(--text-dim)" text-anchor="end">${fmtDate(new Date(pts[pts.length - 1].d))}</text>` : ''}
+      ${area ? `<path d="${area}" fill="url(#lcFill)"/>` : ''}
+      ${pts.length > 1 ? `<polyline points="${linePts}" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>` : ''}
       ${circles}
     </svg>`;
   }
@@ -1466,11 +1494,17 @@
       `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="var(--accent)" stroke="var(--bg-elevated)" stroke-width="1.5"><title>${p.v} — ${fmtDate(new Date(p.d))}</title></circle>`
     ).join('');
 
+    const lbl = v => (Math.round(v * 10) / 10).toString();
+    const area = pts.length > 1 ? `M${pts[0].x.toFixed(1)},${h - pad} L${linePts.split(' ').join(' L')} L${pts[pts.length - 1].x.toFixed(1)},${h - pad} Z` : '';
     return `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="lcFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".28"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
+      <line x1="${pad}" y1="${pad}" x2="${w - pad}" y2="${pad}" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 4"/>
       <line x1="${pad}" y1="${h - pad}" x2="${w - pad}" y2="${h - pad}" stroke="var(--border)" stroke-width="1"/>
-      <text x="4" y="${pad + 4}" font-size="10" fill="var(--text-dim)">${max.toFixed(1)}</text>
-      <text x="4" y="${h - pad + 4}" font-size="10" fill="var(--text-dim)">${min.toFixed(1)}</text>
-      ${pts.length > 1 ? `<polyline points="${linePts}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>` : ''}
+      <text x="4" y="${pad + 4}" font-size="10" fill="var(--text-dim)">${lbl(max)}</text>
+      <text x="4" y="${h - pad + 4}" font-size="10" fill="var(--text-dim)">${lbl(min)}</text>
+      ${pts.length > 1 ? `<text x="${pad}" y="${h - 10}" font-size="10" fill="var(--text-dim)">${fmtDate(new Date(pts[0].d))}</text><text x="${w - pad}" y="${h - 10}" font-size="10" fill="var(--text-dim)" text-anchor="end">${fmtDate(new Date(pts[pts.length - 1].d))}</text>` : ''}
+      ${area ? `<path d="${area}" fill="url(#lcFill)"/>` : ''}
+      ${pts.length > 1 ? `<polyline points="${linePts}" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>` : ''}
       ${circles}
     </svg>`;
   }
@@ -1661,44 +1695,75 @@
       back.addEventListener('click', () => navigateProgressEx(null));
       body.appendChild(back);
 
+      const entries = allGymPLogs.filter(l => l.exerciseId === ex.id).sort((a, b) => a.date - b.date);
+      const fmtKg = v => (Math.round(v * 100) / 100).toString().replace('.', ',');
+      const card = document.createElement('div');
+      card.className = 'pl-card';
       const title = document.createElement('h1');
-      title.style.cssText = 'font-size:16px;margin:0 0 16px;';
+      title.className = 'pl-title';
       title.textContent = ex.name;
-      body.appendChild(title);
+      card.appendChild(title);
+
+      if (entries.length) {
+        const vals = entries.map(e => +e.value);
+        const best = Math.max(...vals), last = vals[vals.length - 1], diff = last - vals[0];
+        const stats = document.createElement('div');
+        stats.className = 'pl-stats';
+        stats.innerHTML =
+          '<div><b>' + fmtKg(best) + '<small> kg</small></b><span>Best</span></div>' +
+          '<div><b>' + fmtKg(last) + '<small> kg</small></b><span>Last</span></div>' +
+          '<div><b class="' + (diff > 0 ? 'up' : diff < 0 ? 'down' : '') + '">' + (diff > 0 ? '+' : '') + fmtKg(diff) + '<small> kg</small></b><span>Since first</span></div>';
+        card.appendChild(stats);
+      }
 
       const addRow = document.createElement('div');
-      addRow.id = 'add-row';
+      addRow.className = 'pl-input';
+      const minus = document.createElement('button');
+      minus.className = 'pl-step'; minus.textContent = '−'; minus.setAttribute('aria-label', 'Minus 2.5 kg');
+      const field = document.createElement('label');
+      field.className = 'pl-field';
       const inp = document.createElement('input');
-      inp.type = 'number'; inp.step = '0.5'; inp.inputMode = 'decimal';
-      inp.placeholder = 'weight, kg...';
+      inp.type = 'number'; inp.step = '0.5'; inp.min = '0'; inp.inputMode = 'decimal';
+      inp.placeholder = '0';
+      if (entries.length) inp.value = entries[entries.length - 1].value;
+      const unit = document.createElement('span');
+      unit.textContent = 'kg';
+      field.appendChild(inp); field.appendChild(unit);
+      const plus = document.createElement('button');
+      plus.className = 'pl-step'; plus.textContent = '+'; plus.setAttribute('aria-label', 'Plus 2.5 kg');
       const btn = document.createElement('button');
-      btn.textContent = 'Add';
+      btn.className = 'pl-add';
+      btn.textContent = 'Log';
+      const step = d => { const v = parseFloat((inp.value || '0').replace(',', '.')) || 0; inp.value = Math.max(0, Math.round((v + d) * 10) / 10); };
+      minus.addEventListener('click', () => step(-2.5));
+      plus.addEventListener('click', () => step(2.5));
       function submit() {
         const val = parseFloat((inp.value || '').replace(',', '.'));
         if (isNaN(val) || val <= 0) return;
-        inp.value = '';
         const data = { exerciseId: ex.id, value: val, date: Date.now() };
         if (usingLocal) { allGymPLogs.push({ id: 'gpl' + Date.now() + Math.random(), ...data }); saveLocal(); renderGymProgress(); }
         else gymPLogsCol.add(data).catch(() => {});
       }
       btn.addEventListener('click', submit);
       inp.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
-      addRow.appendChild(inp); addRow.appendChild(btn);
-      body.appendChild(addRow);
+      addRow.appendChild(minus); addRow.appendChild(field); addRow.appendChild(plus); addRow.appendChild(btn);
+      card.appendChild(addRow);
+      body.appendChild(card);
 
-      const entries = allGymPLogs.filter(l => l.exerciseId === ex.id).sort((a, b) => a.date - b.date);
       if (!entries.length) {
         const empty = document.createElement('div');
         empty.id = 'empty-state';
-        empty.textContent = 'no entries yet';
+        empty.textContent = 'Log your first result above';
         body.appendChild(empty);
         return;
       }
 
-      const chartWrap = document.createElement('div');
-      chartWrap.id = 'weight-chart-wrap';
-      chartWrap.innerHTML = buildLineChartSVG(entries, 'value');
-      body.appendChild(chartWrap);
+      if (entries.length > 1) {
+        const chartWrap = document.createElement('div');
+        chartWrap.id = 'weight-chart-wrap';
+        chartWrap.innerHTML = buildLineChartSVG(entries, 'value');
+        body.appendChild(chartWrap);
+      }
 
       const tableWrap = document.createElement('div');
       tableWrap.id = 'weight-table-wrap';

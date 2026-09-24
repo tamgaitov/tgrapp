@@ -129,11 +129,99 @@
   #a-toast { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 140%);
     z-index: 2100; background: #16171a; color: #fff; border: 1px solid rgba(245,222,179,.25); border-radius: 14px;
     padding: 10px 16px 10px 10px; display: flex; align-items: center; gap: 12px; box-shadow: 0 12px 30px rgba(0,0,0,.45);
-    cursor: pointer; transition: transform .35s cubic-bezier(.2,.9,.3,1.2); max-width: calc(100% - 24px); }
-  #a-toast.show { transform: translate(-50%, 0); }
+    cursor: pointer; transition: transform .35s cubic-bezier(.2,.9,.3,1.2), opacity .25s ease, visibility .35s; max-width: calc(100% - 24px);
+    opacity: 0; visibility: hidden; }
+  #a-toast.show { transform: translate(-50%, 0); opacity: 1; visibility: visible; }
   #a-toast small { display: block; color: #f5deb3; font-size: 11.5px; font-weight: 600; }
   #a-toast b { font-size: 15px; }
   @media (prefers-reduced-motion: reduce) { #a-toast, .trophy svg, .t-cell { transition: none; } }
+
+  /* cabinet slots + arrange */
+  .cab-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; min-height: 38px; }
+  .shelf-items { display: grid !important; grid-template-columns: repeat(6, 1fr); gap: 4px !important; align-items: end; min-height: 104px; position: relative; }
+  .slot { display: flex; justify-content: center; align-items: flex-end; min-height: 100px; border-radius: 8px; position: relative; }
+  .slot .trophy { width: 100%; max-width: 78px; }
+  .slot .trophy svg { width: min(66px, 100%); height: auto; }
+  .shelf-note { position: absolute; left: 0; right: 0; bottom: 34px; text-align: center; }
+  .cab.arranging .slot { outline: 1px dashed rgba(245,222,179,.2); outline-offset: -3px; }
+  .cab.arranging .trophy { touch-action: none; cursor: grab; }
+  .cab.arranging .trophy-tip { display: none; }
+  .slot.drop { background: rgba(245,222,179,.14); }
+  .trophy.selected svg { filter: drop-shadow(0 0 10px rgba(255,220,150,.9)) drop-shadow(0 4px 3px rgba(0,0,0,.5)); transform: translateY(-4px); }
+  .trophy.lifted { opacity: .25; }
+  .drag-ghost { position: fixed; left: 0; top: 0; z-index: 3000; pointer-events: none; opacity: .92; }
+  .drag-ghost svg { width: 66px; height: auto; filter: drop-shadow(0 10px 12px rgba(0,0,0,.5)); }
+
+  /* builder */
+  .cr-wrap { display: grid; grid-template-columns: 220px 1fr; gap: 22px; align-items: start; }
+  .cr-preview { position: sticky; top: 0; background: radial-gradient(ellipse at 50% 0%, #4a3222 0%, #24170e 60%, #1a110a 100%);
+    border-radius: 12px; padding: 22px 16px 16px; box-shadow: inset 0 0 30px rgba(0,0,0,.6); }
+  .cr-stage { display: flex; justify-content: center; align-items: flex-end; min-height: 200px; }
+  .cr-stage svg { filter: drop-shadow(0 6px 5px rgba(0,0,0,.55)); }
+  .cr-prev-name { color: #f5deb3; text-align: center; font-weight: 700; font-size: 14px; margin-top: 12px; overflow-wrap: anywhere; }
+  .cr-form { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .cr-field { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; color: var(--text-dim); }
+  .cr-field input { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 15px;
+    color: var(--text); outline: none; font-family: inherit; }
+  .cr-field input:focus { border-color: var(--accent); }
+  .cr-field input.err { border-color: var(--danger); }
+  .cr-sec { font-size: 12.5px; color: var(--text-dim); font-weight: 600; margin-top: 6px; }
+  .cr-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .cr-opt, .cr-mat { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px 6px; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text); font-family: inherit; min-width: 64px; }
+  .cr-opt small, .cr-mat small { font-size: 11.5px; color: var(--text-dim); }
+  .cr-opt.on, .cr-mat.on, .cr-emb.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .cr-mat i { width: 26px; height: 26px; border-radius: 50%; display: block; box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); }
+  .cr-emblems { display: grid; grid-template-columns: repeat(auto-fill, minmax(42px, 1fr)); gap: 6px; }
+  .cr-emb { aspect-ratio: 1; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 10px; color: var(--text); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; padding: 0; }
+  .cr-emb:hover { border-color: var(--accent); color: var(--accent); }
+  .cr-check { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--text); cursor: pointer; }
+  .cr-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+  @media (max-width: 640px) { .cr-wrap { grid-template-columns: 1fr; } .cr-preview { position: static; } .cr-stage { min-height: 170px; } }
+
+  /* settings */
+  #set-modal { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; padding: 20px; }
+  #set-modal.open { display: flex; }
+  .th-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .th-card { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 8px; cursor: pointer; display: flex; flex-direction: column;
+    gap: 7px; color: var(--text); font-family: inherit; text-align: left; }
+  .th-card b { font-size: 13.5px; padding-left: 2px; }
+  .th-card.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .th-prev { display: flex; height: 58px; border-radius: 8px; overflow: hidden; border: 1px solid rgba(128,128,128,.25); }
+  .th-prev i { width: 28%; display: block; }
+  .th-prev em { flex: 1; margin: 10px; border-radius: 5px; display: flex; align-items: flex-end; padding: 6px; }
+  .th-prev u { display: block; width: 50%; height: 8px; border-radius: 4px; }
+  .th-system { background: none; border: 1px dashed var(--border); border-radius: 10px; padding: 9px; color: var(--text-dim); cursor: pointer; font-family: inherit; font-size: 13px; }
+  .th-system.on { border-style: solid; border-color: var(--accent); color: var(--accent); }
+
+  /* themes */
+  :root[data-theme="blood"] {
+    --bg: #140708; --bg-elevated: #1e0b0d; --sidebar-bg: #0c0405; --sidebar-text: #ecd3d4; --sidebar-text-dim: #93646a;
+    --sidebar-active: #3d0f15; --sidebar-hover: #220a0d; --text: #f6e9e9; --text-dim: #b3898c; --accent: #c8102e; --accent-soft: #3d0d14;
+    --border: #3c171c; --danger: #ff6b6b; --popover-bg: #241013; color-scheme: dark;
+  }
+  :root[data-theme="blood"] body { background: radial-gradient(1100px 520px at 75% -12%, #3d0a12 0%, transparent 65%), var(--bg); }
+  :root[data-theme="blood"] #sidebar { box-shadow: inset -1px 0 0 #3c0c12; }
+  :root[data-theme="blood"] .t-cell:not(.filled) { border-color: #4a1a20; }
+
+  :root[data-theme="skyrim"] {
+    --bg: #16140f; --bg-elevated: #211e18; --sidebar-bg: #0e0d0a; --sidebar-text: #e6dcc6; --sidebar-text-dim: #8f8672;
+    --sidebar-active: #2c271d; --sidebar-hover: #1b1914; --text: #ede5d1; --text-dim: #a59c86; --accent: #c4a468; --accent-soft: #2f2919;
+    --border: #3b3529; --danger: #d9644a; --popover-bg: #1f1c16; color-scheme: dark;
+  }
+  :root[data-theme="skyrim"] body { font-family: 'Jost', 'Futura', 'Century Gothic', -apple-system, sans-serif;
+    background: radial-gradient(1000px 600px at 50% -20%, #2b2518 0%, transparent 70%), radial-gradient(900px 500px at 50% 120%, #0a0907 0%, transparent 60%), var(--bg); }
+  :root[data-theme="skyrim"] #sidebar { box-shadow: inset -1px 0 0 #3b3529, inset -3px 0 0 #0e0d0a, inset -4px 0 0 #2a2519; }
+  :root[data-theme="skyrim"] .x-title, :root[data-theme="skyrim"] .pl-title, :root[data-theme="skyrim"] .a-m-name,
+  :root[data-theme="skyrim"] .crumb, :root[data-theme="skyrim"] #sidebar-title, :root[data-theme="skyrim"] .tab-btn,
+  :root[data-theme="skyrim"] .t-name-input, :root[data-theme="skyrim"] #sidebar .row-name[style*="700"] {
+    font-family: 'Cinzel', 'Trajan Pro', Georgia, serif; letter-spacing: .04em; }
+  :root[data-theme="skyrim"] #add-btn, :root[data-theme="skyrim"] #weight-add-btn, :root[data-theme="skyrim"] .x-btn.primary,
+  :root[data-theme="skyrim"] .tab-btn.active, :root[data-theme="skyrim"] .pl-add, :root[data-theme="skyrim"] .sync-actions button.primary,
+  :root[data-theme="skyrim"] button[style*="var(--accent)"] { color: #16140f !important; }
+  :root[data-theme="skyrim"] .pl-card, :root[data-theme="skyrim"] .t-stats, :root[data-theme="skyrim"] .a-card, :root[data-theme="skyrim"] .t-card {
+    box-shadow: inset 0 0 0 1px rgba(196,164,104,.08); }
   @media (max-width: 520px) { .t-stats { grid-template-columns: repeat(2, 1fr); } .t-grid { gap: 4px; } }
   `;
   const styleEl = document.createElement('style');
@@ -183,6 +271,15 @@
   let boards = [], cells = [];
   boardsCol.orderBy('createdAt', 'asc').onSnapshot(s => { boards = s.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); });
   cellsCol.orderBy('filledAt', 'asc').onSnapshot(s => { cells = s.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); });
+  const customCol = SyncDB.collection('customTrophies');
+  const settingsCol = SyncDB.collection('appSettings');
+  let customs = [], shelfLayout = {};
+  customCol.orderBy('createdAt', 'asc').onSnapshot(s => { customs = s.docs.map(d => ({ id: d.id, ...d.data() })); if (currentPage === 'achievements') renderAll(); });
+  settingsCol.orderBy('k', 'asc').onSnapshot(s => {
+    const d = s.docs.find(x => x.id === 'shelf'); shelfLayout = (d && d.data().slots) || {};
+    if (currentPage === 'achievements' && aTab === 'mine' && !dragState) renderAchievements();
+  });
+  let draft = null, arranging = false, selectedKey = null, dragState = null;
 
   const RHYTHMS = [
     { id: 'daily', label: 'Every day', gap: 1 },
@@ -239,6 +336,7 @@
     trophy: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M7 4H17V9C17 12 14.8 14 12 14C9.2 14 7 12 7 9V4Z"/><path d="M7 6H4.5C4.5 9 5.5 10.5 7.3 10.8"/><path d="M17 6H19.5C19.5 9 18.5 10.5 16.7 10.8"/><path d="M12 14V17.5"/><path d="M8.5 20.5H15.5L14.8 17.5H9.2L8.5 20.5Z"/></svg>',
     shelf: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" style="vertical-align:-2px"><rect x="2" y="1.5" width="12" height="13" rx="1.2"/><path d="M2 8H14"/><path d="M5 8V5.5M8 8V4.5M11 8V6"/><path d="M5.5 14.5V12M9.5 14.5V11.5"/></svg>',
     list: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" style="vertical-align:-2px"><circle cx="3.5" cy="4" r="1"/><circle cx="3.5" cy="8" r="1"/><circle cx="3.5" cy="12" r="1"/><path d="M6.5 4H13M6.5 8H13M6.5 12H13"/></svg>',
+    brush: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M5 2.5H11V5.5C11 7.5 9.7 8.8 8 8.8C6.3 8.8 5 7.5 5 5.5Z"/><path d="M8 8.8V11M5.8 13.5H10.2L9.8 11H6.2Z"/><path d="M12.5 1.5L13 2.7L14.2 3.2L13 3.7L12.5 4.9L12 3.7L10.8 3.2L12 2.7Z" fill="currentColor"/></svg>',
     plus: '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>'
   };
   function row(opts) {
@@ -286,6 +384,7 @@
     if (aOpen) {
       list.appendChild(row({ icon: I.shelf, name: 'My achievements', indent: 27, active: currentPage === 'achievements' && aTab === 'mine', onClick: () => goAch('mine') }));
       list.appendChild(row({ icon: I.list, name: 'All achievements', indent: 27, active: currentPage === 'achievements' && aTab === 'all', onClick: () => goAch('all') }));
+      list.appendChild(row({ icon: I.brush, name: 'Create trophy', indent: 27, active: currentPage === 'achievements' && aTab === 'create', onClick: () => { draft = null; goAch('create'); } }));
     }
   };
 
@@ -304,7 +403,7 @@
       if (b) { sep(); crumb(b.name, true); }
     } else {
       crumb('Achievements', false, () => goAch('all'));
-      sep(); crumb(aTab === 'mine' ? 'My achievements' : 'All achievements', true);
+      sep(); crumb({ mine: 'My achievements', all: 'All achievements', create: 'Create trophy' }[aTab], true);
     }
     return true;
   };
@@ -471,7 +570,8 @@
     platinum: ['#f0fdff', '#a6dbe9', '#3f7f97'],
     diamond: ['#e6f9ff', '#62c9ff', '#1f5fc8'],
     ruby: ['#ffc2c2', '#e04848', '#7d1717'],
-    emerald: ['#c4f7da', '#36be72', '#155f36']
+    emerald: ['#c4f7da', '#36be72', '#155f36'],
+    netherite: ['#a597ad', '#4d4552', '#19161b']
   };
   let gid = 0;
   const EMBLEMS = {
@@ -483,8 +583,38 @@
     dumbbell: (c) => `<path d="M-11 -4V4M-7 -7V7M7 -7V7M11 -4V4M-7 0H7" stroke="${c}" stroke-width="3.2" fill="none" stroke-linecap="round"/>`,
     up: (c) => `<path d="M0 10V-8M-7 -1L0 -9L7 -1" stroke="${c}" stroke-width="3.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
     crown: (c) => `<path d="M-10 6L-11 -6L-4 -1L0 -9L4 -1L11 -6L10 6Z" fill="${c}"/>`,
-    target: (c) => `<circle r="9" stroke="${c}" stroke-width="2.6" fill="none"/><circle r="4" stroke="${c}" stroke-width="2.6" fill="none"/>`
+    target: (c) => `<circle r="9" stroke="${c}" stroke-width="2.6" fill="none"/><circle r="4" stroke="${c}" stroke-width="2.6" fill="none"/>`,
+    book: (c) => `<path d="M-11 -8C-7 -9.5 -3 -8.5 0 -6C3 -8.5 7 -9.5 11 -8V8C7 6.5 3 7.5 0 9C-3 7.5 -7 6.5 -11 8Z M0 -6V9" stroke="${c}" stroke-width="2.4" fill="none" stroke-linejoin="round"/>`,
+    run: (c) => `<circle cx="3" cy="-9" r="2.6" fill="${c}"/><path d="M-7 -2L0 -5.5L4 -1L8 0M0 -5.5L-2 3L3 6L2 11M-2 3L-7 7L-11 5.5" stroke="${c}" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+    bike: (c) => `<circle cx="-6.5" cy="4" r="5" stroke="${c}" stroke-width="2.2" fill="none"/><circle cx="6.5" cy="4" r="5" stroke="${c}" stroke-width="2.2" fill="none"/><path d="M-6.5 4L-2 -5H5L6.5 4M-2 -5L1 4H-6.5M3 -8H6" stroke="${c}" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+    swim: (c) => `<circle cx="5" cy="-7" r="2.6" fill="${c}"/><path d="M-9 -1L-1 -6L3 -1M-12 4C-9 1.5 -6 1.5 -3 4C0 6.5 3 6.5 6 4C9 1.5 12 4 12 4M-12 9.5C-9 7 -6 7 -3 9.5C0 12 3 12 6 9.5C9 7 12 9.5 12 9.5" stroke="${c}" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+    mountain: (c) => `<path d="M-12 9L-3 -7L2 1L5 -3L12 9Z" fill="${c}"/><path d="M-5.5 -2.5L-3 -7L-0.5 -2.8" stroke="#fff" stroke-opacity=".6" stroke-width="1.6" fill="none"/>`,
+    heart: (c) => `<path d="M0 9.5C0 9.5 -10.5 3.5 -10.5 -3C-10.5 -7 -7.5 -9.5 -4.5 -9.5C-2.5 -9.5 -1 -8.5 0 -6.8C1 -8.5 2.5 -9.5 4.5 -9.5C7.5 -9.5 10.5 -7 10.5 -3C10.5 3.5 0 9.5 0 9.5Z" fill="${c}"/>`,
+    cap: (c) => `<path d="M-12 -3L0 -9L12 -3L0 3Z" fill="${c}"/><path d="M-7 0.5V5.5C-4 8.5 4 8.5 7 5.5V0.5M12 -3V5" stroke="${c}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`,
+    pen: (c) => `<path d="M-9 9.5L-7.5 3L5 -9.5L9.5 -5L-3 7.5Z M2.5 -7L7 -2.5" stroke="${c}" stroke-width="2.4" fill="none" stroke-linejoin="round"/>`,
+    code: (c) => `<path d="M-5 -7L-11.5 0L-5 7M5 -7L11.5 0L5 7M2 -10L-2 10" stroke="${c}" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+    briefcase: (c) => `<rect x="-11" y="-5" width="22" height="14" rx="2.5" stroke="${c}" stroke-width="2.4" fill="none"/><path d="M-4 -5V-8.5H4V-5M-11 1H11" stroke="${c}" stroke-width="2.4" fill="none"/>`,
+    coin: (c) => `<circle r="10.5" stroke="${c}" stroke-width="2.4" fill="none"/><text y="1" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="800" fill="${c}" font-family="-apple-system,'Segoe UI',Roboto,sans-serif">₸</text>`,
+    music: (c) => `<circle cx="-5" cy="6" r="3.8" fill="${c}"/><circle cx="7" cy="3.5" r="3.8" fill="${c}"/><path d="M-1.4 6V-8L10.6 -10.5V3.5" stroke="${c}" stroke-width="2.4" fill="none"/>`,
+    plane: (c) => `<path d="M-11.5 0L11.5 -9.5L4.5 10L0.5 2.5Z M0.5 2.5L11.5 -9.5" stroke="${c}" stroke-width="2.3" fill="none" stroke-linejoin="round"/>`,
+    home: (c) => `<path d="M-11 0L0 -9.5L11 0M-7.5 -2.5V9.5H7.5V-2.5M-2.5 9.5V3.5H2.5V9.5" stroke="${c}" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+    moon: (c) => `<path d="M3 -10.5A10.5 10.5 0 1 0 10.5 5A8.5 8.5 0 0 1 3 -10.5Z" fill="${c}"/>`,
+    chat: (c) => `<path d="M-11 -8H11V4.5H-1.5L-7 9.5V4.5H-11Z" stroke="${c}" stroke-width="2.4" fill="none" stroke-linejoin="round"/>`,
+    star: (c) => `<path d="M0 -11L3.2 -3.5L11 -3L5 2.3L7 10.3L0 6L-7 10.3L-5 2.3L-11 -3L-3.2 -3.5Z" fill="${c}"/>`,
+    fire: (c) => `<path d="M0 -11C4.5 -6 8.5 -3 8 2C7.5 7 4 10 0 10C-4 10 -7.5 7 -8 2C-8.5 -2 -5.5 -4.5 -3.5 -8C-3 -4.5 -1.5 -3.5 0 -3C1 -5.5 1 -8 0 -11Z" fill="${c}"/>`,
+    medkit: (c) => `<rect x="-10.5" y="-7.5" width="21" height="16" rx="2.5" stroke="${c}" stroke-width="2.4" fill="none"/><path d="M0 -3.5V4.5M-4 0.5H4M-3.5 -7.5V-10H3.5V-7.5" stroke="${c}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`
   };
+  const EMBLEM_LIST = [
+    ['dumbbell', 'Gym'], ['run', 'Running'], ['bike', 'Cycling'], ['swim', 'Swimming'], ['mountain', 'Hiking'],
+    ['heart', 'Health'], ['medkit', 'Recovery'], ['moon', 'Sleep'], ['scale', 'Weight'], ['book', 'Reading'],
+    ['cap', 'Study'], ['pen', 'Writing'], ['chat', 'Languages'], ['code', 'Code'], ['briefcase', 'Work'],
+    ['coin', 'Money'], ['music', 'Music'], ['plane', 'Travel'], ['home', 'Home'], ['fire', 'Fire'],
+    ['bolt', 'Energy'], ['star', 'Star'], ['crown', 'Crown'], ['target', 'Goal'], ['check', 'Done'],
+    ['clock', 'Time'], ['flag', 'Finish'], ['up', 'Growth']
+  ];
+  const MATERIALS = [['bronze', 'Bronze'], ['silver', 'Silver'], ['gold', 'Gold'], ['diamond', 'Diamond'], ['netherite', 'Netherite']];
+  const RIBBONS = { bronze: ['#8a4b22', '#c47a3d'], silver: ['#3f5fd6', '#8fa3b8'], gold: ['#c8102e', '#f0bd2a'], diamond: ['#1f5fc8', '#62c9ff'],
+    netherite: ['#3a2d44', '#7a4fa0'], ruby: ['#7d1717', '#e04848'], emerald: ['#155f36', '#36be72'], platinum: ['#3f7f97', '#a6dbe9'] };
   function flameSVG(cx, baseY, s, id) {
     return `<g transform="translate(${cx} ${baseY}) scale(${s})">
       <path d="M0 -26C7 -18 13 -13 12 -5C11 1 6 4 0 4C-6 4 -11 1 -12 -5C-13 -11 -8 -14 -5 -20C-4 -15 -2 -13 0 -12C1 -16 1 -21 0 -26Z" fill="url(#${id}f)"/>
@@ -523,7 +653,8 @@
         <path d="M36 86H64L67 104H33Z" fill="url(#${id})"/>
         ${center(o, 45, m)}`;
     } else if (o.shape === 'medal') {
-      body = `<path d="M34 8H48L56 44H42Z" fill="${o.ribbon || '#3f5fd6'}"/><path d="M66 8H52L44 44H58Z" fill="${o.ribbon2 || '#e03e3e'}"/>
+      const rb = RIBBONS[o.metal] || ['#3f5fd6', '#e03e3e'];
+      body = `<path d="M34 8H48L56 44H42Z" fill="${o.ribbon || rb[0]}"/><path d="M66 8H52L44 44H58Z" fill="${o.ribbon2 || rb[1]}"/>
         <path d="M34 8H48L50 16Z" fill="#000" opacity=".15"/>
         <circle cx="50" cy="64" r="27" fill="url(#${id})"/><circle cx="50" cy="64" r="21" fill="none" stroke="${m[0]}" stroke-width="2" opacity=".7"/>
         <rect x="46" y="90" width="8" height="14" fill="#3a2616"/>
@@ -558,9 +689,6 @@
   }
 
   const ACH = [
-    { id: 'first_mark', cat: 'Habits', name: 'First step', desc: 'Fill the first square on a board.', art: { shape: 'medal', metal: 'bronze', emblem: 'flag', ribbon: '#33c27a', ribbon2: '#1d8a52' },
-      calc: () => { const hd = habitData().filter(x => x.st.filled);
-        return { events: hd.map(({ b, st }) => ({ day: st.cs.map(c => c.date).sort()[0], ctx: b.name })), progress: { cur: hd.length ? 1 : 0, target: 1 } }; } },
     { id: 'streak5', cat: 'Habits', name: 'Warming up', desc: '5 marks in a row on one board. Earned again for every 5.', art: { shape: 'cup', metal: 'bronze', label: '5', flame: .7 }, calc: streakAch(5) },
     { id: 'streak10', cat: 'Habits', name: 'On fire', desc: '10 marks in a row on one board. Earned again for every 10.', art: { shape: 'cup', metal: 'gold', label: '10', flame: 1 }, calc: streakAch(10) },
     { id: 'streak30', cat: 'Habits', name: 'Iron will', desc: '30 marks in a row on one board.', art: { shape: 'cup', metal: 'platinum', label: '30', flame: 1.15 }, calc: streakAch(30) },
@@ -606,21 +734,13 @@
       calc: () => { const d = allTasks.filter(t => t.done && t.completedAt && t.priority === 2).sort((a, b) => a.completedAt - b.completedAt);
         return { events: every(d, 5).map(t => ({ day: tsDay(t.completedAt), ctx: t.text })), progress: { cur: d.length % 5, target: 5 } }; } },
 
-    { id: 'weighin7', cat: 'Body and gym', name: 'Scale regular', desc: 'Log your weight 7 days in a row.', art: { shape: 'medal', metal: 'emerald', emblem: 'scale', ribbon: '#33c27a', ribbon2: '#9b5de5' },
-      calc: () => { const runs = runsOf(allWeights.map(w => dayNum(tsDay(w.date))), 1); const events = [];
-        runs.forEach(r => { for (let k = 7; k <= r.days.length; k += 7) events.push({ day: numToStr(r.days[k - 1]), ctx: k + ' days in a row' }); });
-        const last = runs[runs.length - 1]; const cur = last && dayNum(dayStr()) - last.days[last.days.length - 1] <= 1 ? last.days.length : 0;
-        return { events, progress: { cur: cur % 7, target: 7 } }; } },
-    { id: 'pr', cat: 'Body and gym', name: 'New record', desc: 'Beat your best result in a tracked exercise.', art: { shape: 'cup', metal: 'ruby', label: 'PR' },
+    { id: 'pr', cat: 'Gym', name: 'New record', desc: 'Beat your best result in a tracked exercise.', art: { shape: 'cup', metal: 'ruby', label: 'PR' },
       calc: () => { const events = [];
         allGymPEx.forEach(ex => { let max = null;
           allGymPLogs.filter(l => l.exerciseId === ex.id).sort((a, b) => a.date - b.date).forEach(l => {
             const v = +l.value; if (max !== null && v > max) events.push({ day: tsDay(l.date), ctx: ex.name + ': ' + v }); if (max === null || v > max) max = v; }); });
         events.sort((a, b) => a.day < b.day ? -1 : 1);
-        return { events, progress: { cur: 0, target: 1, label: 'Log a result above your best' } }; } },
-    { id: 'logbook', cat: 'Body and gym', name: 'Logbook', desc: 'Log 10 workouts in the gym plan.', art: { shape: 'medal', metal: 'bronze', emblem: 'dumbbell', ribbon: '#6b6dae', ribbon2: '#3f5fd6' },
-      calc: () => { const d = allGymLogs.slice().sort((a, b) => a.date - b.date);
-        return { events: every(d, 10).map(l => ({ day: tsDay(l.date), ctx: 'Workout #' + (d.indexOf(l) + 1) })), progress: { cur: d.length % 10, target: 10 } }; } }
+        return { events, progress: { cur: 0, target: 1, label: 'Log a result above your best' } }; } }
   ];
 
   let achCache = null;
@@ -664,19 +784,20 @@
   }
 
   // ---- pages ----
-  let resizeObs = null, lastShelfWidth = 0;
   function renderAchievements() {
     const res = computeAll();
     pageA.innerHTML = '';
     const head = el('div', 'x-head');
     const tabs = el('div', 'tab-row'); tabs.style.margin = '0';
-    [['mine', 'My achievements'], ['all', 'All achievements']].forEach(([id, l]) => {
+    [['mine', 'My achievements'], ['all', 'All achievements'], ['create', 'Create trophy']].forEach(([id, l]) => {
       const t = el('button', 'tab-btn' + (aTab === id ? ' active' : '')); t.textContent = l;
-      t.addEventListener('click', () => goAch(id)); tabs.appendChild(t);
+      t.addEventListener('click', () => { if (id === 'create') draft = null; goAch(id); }); tabs.appendChild(t);
     });
     head.appendChild(tabs);
     pageA.appendChild(head);
-    if (aTab === 'mine') renderCabinet(res); else renderCatalog(res);
+    if (aTab === 'mine') renderCabinet(res);
+    else if (aTab === 'create') renderCreate();
+    else renderCatalog(res);
   }
 
   function renderCatalog(res) {
@@ -695,7 +816,7 @@
           <div class="a-card-desc">${esc(r.a.desc)}</div>
           <div class="a-bar"><i style="width:${pct}%"></i></div>
           <div class="a-bar-label">${esc(p.label || (p.cur + ' / ' + p.target))}</div></div>`;
-        card.addEventListener('click', () => openDetail(r.a.id));
+        card.addEventListener('click', () => openDetail('a:' + r.a.id));
         list.appendChild(card);
       });
       g.appendChild(list);
@@ -703,50 +824,234 @@
     });
   }
 
+  // ---------- cabinet with free placement ----------
+  const PER_SHELF = 6;
+  function shelfItems(res) {
+    const items = [];
+    res.filter(r => r.events.length).forEach(r => items.push({ key: 'a:' + r.a.id, name: r.a.name, art: r.a.art, count: r.events.length, first: r.events[0].day }));
+    customs.forEach(c => items.push({ key: 'c:' + c.id, name: c.name || 'Trophy', art: customArt(c), count: 1, first: c.date || tsDay(c.createdAt), custom: true }));
+    items.sort((a, b) => (a.first < b.first ? -1 : a.first > b.first ? 1 : 0));
+    const placed = {}, taken = new Set();
+    items.forEach(it => { const s = shelfLayout[it.key]; if (Number.isInteger(s) && s >= 0 && !taken.has(s)) { placed[it.key] = s; taken.add(s); } });
+    let next = 0;
+    items.forEach(it => { if (placed[it.key] === undefined) { while (taken.has(next)) next++; placed[it.key] = next; taken.add(next); } });
+    return { items, placed };
+  }
+  function saveLayout(placed) {
+    shelfLayout = { ...placed };
+    settingsCol.doc('shelf').set({ k: 'shelf', slots: shelfLayout });
+  }
+  function moveTo(key, slot) {
+    const { placed } = shelfItems(achCache || computeAll());
+    const from = placed[key];
+    if (from === undefined || from === slot) return;
+    const occupant = Object.keys(placed).find(k => placed[k] === slot);
+    placed[key] = slot;
+    if (occupant) placed[occupant] = from;
+    saveLayout(placed);
+  }
+
   function renderCabinet(res) {
-    const earned = res.filter(r => r.events.length).sort((x, y) => (x.events[0].day < y.events[0].day ? -1 : 1));
-    const cab = el('div', 'cab');
+    const { items, placed } = shelfItems(res);
+    const bar = el('div', 'cab-bar');
+    const info = el('span', 't-hint');
+    info.textContent = arranging ? 'Drag a trophy to any spot, or tap a trophy and then tap where it should go.'
+      : items.length + ' trophies on the shelf.';
+    const arr = el('button', 'x-btn' + (arranging ? ' primary' : '')); arr.textContent = arranging ? 'Done' : 'Arrange';
+    arr.addEventListener('click', () => { arranging = !arranging; selectedKey = null; renderAchievements(); });
+    bar.appendChild(info); if (items.length) bar.appendChild(arr);
+    pageA.appendChild(bar);
+
+    const cab = el('div', 'cab' + (arranging ? ' arranging' : ''));
     cab.appendChild(el('div', 'cab-top'));
     const inner = el('div', 'cab-inner');
     cab.appendChild(inner);
     pageA.appendChild(cab);
 
-    const width = inner.clientWidth || pageA.clientWidth || 600;
-    lastShelfWidth = width;
-    const perShelf = Math.max(3, Math.floor((width - 24) / 86));
-    const shelves = Math.max(3, Math.ceil(earned.length / perShelf));
-    for (let s = 0; s < shelves; s++) {
+    const maxSlot = Object.values(placed).reduce((m, v) => Math.max(m, v), -1);
+    const shelves = Math.max(3, Math.ceil((maxSlot + 1) / PER_SHELF) + (arranging ? 1 : 0));
+    const bySlot = {};
+    items.forEach(it => { bySlot[placed[it.key]] = it; });
+    for (let sh = 0; sh < shelves; sh++) {
       const shelf = el('div', 'shelf');
-      const items = el('div', 'shelf-items');
-      const slice = earned.slice(s * perShelf, (s + 1) * perShelf);
-      if (!earned.length && s === 1) { const n = el('div', 'shelf-note'); n.textContent = 'Empty for now. Your trophies will stand here.'; items.appendChild(n); }
-      slice.forEach(r => {
-        const t = el('button', 'trophy');
-        t.setAttribute('aria-label', r.a.name + (r.events.length > 1 ? ', earned ' + r.events.length + ' times' : ''));
-        t.innerHTML = (r.events.length > 1 ? '<span class="trophy-count">×' + r.events.length + '</span>' : '') +
-          '<span class="trophy-tip">' + esc(r.a.name) + '</span>' + trophySVG(r.a.art, 66);
-        t.addEventListener('click', () => openDetail(r.a.id));
-        items.appendChild(t);
-      });
-      shelf.appendChild(items);
+      const row = el('div', 'shelf-items');
+      for (let k = 0; k < PER_SHELF; k++) {
+        const idx = sh * PER_SHELF + k;
+        const slot = el('div', 'slot'); slot.dataset.slot = idx;
+        const it = bySlot[idx];
+        if (it) {
+          const t = el('button', 'trophy' + (selectedKey === it.key ? ' selected' : ''));
+          t.dataset.key = it.key;
+          t.setAttribute('aria-label', it.name + (it.count > 1 ? ', earned ' + it.count + ' times' : ''));
+          t.innerHTML = (it.count > 1 ? '<span class="trophy-count">×' + it.count + '</span>' : '') +
+            '<span class="trophy-tip">' + esc(it.name) + '</span>' + trophySVG(it.art, 66);
+          t.addEventListener('click', () => { if (!arranging) openDetail(it.key); });
+          slot.appendChild(t);
+        }
+        row.appendChild(slot);
+      }
+      if (!items.length && sh === 1) {
+        const n = el('div', 'shelf-note'); n.textContent = 'Empty for now. Your trophies will stand here.'; row.appendChild(n);
+      }
+      shelf.appendChild(row);
       shelf.appendChild(el('div', 'plank'));
       inner.appendChild(shelf);
     }
+    const earnedCount = res.filter(r => r.events.length).length;
     const foot = el('div', 't-hint'); foot.style.marginTop = '14px';
-    foot.textContent = earned.length + ' of ' + ACH.length + ' achievements earned, ' + earned.reduce((s, r) => s + r.events.length, 0) + ' trophies in total.';
+    foot.textContent = earnedCount + ' of ' + ACH.length + ' achievements earned' + (customs.length ? ', ' + customs.length + ' custom trophies' : '') + '.';
     pageA.appendChild(foot);
-
-    if (!resizeObs && window.ResizeObserver) {
-      resizeObs = new ResizeObserver(() => {
-        if (currentPage !== 'achievements' || aTab !== 'mine') return;
-        const w = pageA.clientWidth;
-        if (Math.abs(w - lastShelfWidth) > 40) renderAchievements();
-      });
-      resizeObs.observe(pageA);
-    }
+    if (arranging) bindArrange(cab);
   }
 
-  function openDetail(id) {
+  function bindArrange(cab) {
+    cab.addEventListener('pointerdown', e => {
+      const slot = e.target.closest('.slot'); if (!slot) return;
+      const t = e.target.closest('.trophy');
+      if (!t) {
+        if (selectedKey) { const k = selectedKey; selectedKey = null; moveTo(k, +slot.dataset.slot); renderAchievements(); }
+        return;
+      }
+      e.preventDefault();
+      dragState = { key: t.dataset.key, x: e.clientX, y: e.clientY, moved: false, el: t, ghost: null, over: null };
+      try { t.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+  }
+  window.addEventListener('pointermove', e => {
+    const d = dragState; if (!d) return;
+    if (!d.moved && Math.hypot(e.clientX - d.x, e.clientY - d.y) < 6) return;
+    if (!d.moved) {
+      d.moved = true;
+      d.ghost = el('div', 'drag-ghost', d.el.querySelector('svg').outerHTML);
+      document.body.appendChild(d.ghost);
+      d.el.classList.add('lifted');
+    }
+    d.ghost.style.transform = 'translate(' + (e.clientX - 33) + 'px,' + (e.clientY - 60) + 'px)';
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    const slot = under && under.closest && under.closest('.cab .slot');
+    if (d.over && d.over !== slot) d.over.classList.remove('drop');
+    if (slot) slot.classList.add('drop');
+    d.over = slot;
+  });
+  function endDrag() {
+    const d = dragState; if (!d) return;
+    dragState = null;
+    if (d.ghost) d.ghost.remove();
+    if (d.moved) {
+      if (d.over) moveTo(d.key, +d.over.dataset.slot);
+      selectedKey = null;
+    } else if (selectedKey === d.key) selectedKey = null;
+    else if (selectedKey) { const target = shelfItems(achCache || computeAll()).placed[d.key]; const k = selectedKey; selectedKey = null; moveTo(k, target); }
+    else selectedKey = d.key;
+    renderAchievements();
+  }
+  window.addEventListener('pointerup', endDrag);
+  window.addEventListener('pointercancel', () => { if (dragState) { if (dragState.ghost) dragState.ghost.remove(); dragState = null; renderAchievements(); } });
+
+  // ---------- custom trophy builder ----------
+  function customArt(c) {
+    return { shape: c.shape || 'cup', metal: c.metal || 'gold', emblem: c.label ? null : (c.emblem || 'star'), label: c.label || '', flame: c.shape === 'cup' && c.flame ? 1 : 0 };
+  }
+  function renderCreate() {
+    if (!draft) draft = { id: null, name: '', desc: '', date: dayStr(), shape: 'cup', emblem: 'dumbbell', label: '', metal: 'gold', flame: false };
+    const wrap = el('div', 'cr-wrap');
+    const prev = el('div', 'cr-preview');
+    const stage = el('div', 'cr-stage');
+    const plank = el('div', 'plank'); plank.style.margin = '0';
+    prev.appendChild(stage); prev.appendChild(plank);
+    const prevName = el('div', 'cr-prev-name');
+    prev.appendChild(prevName);
+    const form = el('div', 'cr-form');
+    wrap.appendChild(prev); wrap.appendChild(form);
+    pageA.appendChild(wrap);
+
+    const refresh = () => {
+      stage.innerHTML = trophySVG(customArt(draft), 150);
+      prevName.textContent = draft.name || 'Your trophy';
+      form.querySelectorAll('[data-shape]').forEach(b => b.classList.toggle('on', b.dataset.shape === draft.shape));
+      form.querySelectorAll('[data-emblem]').forEach(b => b.classList.toggle('on', !draft.label && b.dataset.emblem === draft.emblem));
+      form.querySelectorAll('[data-metal]').forEach(b => b.classList.toggle('on', b.dataset.metal === draft.metal));
+      flameRow.style.display = draft.shape === 'cup' ? '' : 'none';
+    };
+    const field = (label, node) => { const l = el('label', 'cr-field'); const s = el('span'); s.textContent = label; l.appendChild(s); l.appendChild(node); form.appendChild(l); return node; };
+
+    const nameIn = field('Name', el('input')); nameIn.maxLength = 40; nameIn.placeholder = 'e.g. First half marathon'; nameIn.value = draft.name;
+    nameIn.addEventListener('input', () => { draft.name = nameIn.value; refresh(); });
+    const descIn = field('What it is for (optional)', el('input')); descIn.maxLength = 120; descIn.value = draft.desc;
+    descIn.addEventListener('input', () => { draft.desc = descIn.value; });
+    const dateIn = field('Date', el('input')); dateIn.type = 'date'; dateIn.value = draft.date;
+    dateIn.addEventListener('change', () => { draft.date = dateIn.value || dayStr(); });
+
+    const sec = t => { const h = el('div', 'cr-sec'); h.textContent = t; form.appendChild(h); };
+    sec('Shape');
+    const shapes = el('div', 'cr-row');
+    [['cup', 'Cup'], ['medal', 'Medal'], ['star', 'Star'], ['shield', 'Shield']].forEach(([id, l]) => {
+      const b = el('button', 'cr-opt'); b.dataset.shape = id; b.title = l;
+      b.innerHTML = trophySVG({ shape: id, metal: draft.metal }, 34) + '<small>' + l + '</small>';
+      b.addEventListener('click', () => { draft.shape = id; refresh(); });
+      shapes.appendChild(b);
+    });
+    form.appendChild(shapes);
+
+    sec('Symbol');
+    const embl = el('div', 'cr-emblems');
+    EMBLEM_LIST.forEach(([id, l]) => {
+      const b = el('button', 'cr-emb'); b.dataset.emblem = id; b.title = l; b.setAttribute('aria-label', l);
+      b.innerHTML = `<svg width="26" height="26" viewBox="-14 -14 28 28">${EMBLEMS[id]('currentColor')}</svg>`;
+      b.addEventListener('click', () => { draft.emblem = id; draft.label = ''; labelIn.value = ''; refresh(); });
+      embl.appendChild(b);
+    });
+    form.appendChild(embl);
+    const labelIn = field('Or text instead of a symbol (up to 3 characters)', el('input'));
+    labelIn.maxLength = 3; labelIn.placeholder = '42'; labelIn.value = draft.label;
+    labelIn.addEventListener('input', () => { draft.label = labelIn.value.trim(); refresh(); });
+
+    sec('Material');
+    const mats = el('div', 'cr-row');
+    MATERIALS.forEach(([id, l]) => {
+      const m = METALS[id];
+      const b = el('button', 'cr-mat'); b.dataset.metal = id;
+      b.innerHTML = `<i style="background:linear-gradient(135deg,${m[0]},${m[1]} 55%,${m[2]})"></i><small>${l}</small>`;
+      b.addEventListener('click', () => {
+        draft.metal = id;
+        shapes.querySelectorAll('.cr-opt').forEach(o => { o.innerHTML = trophySVG({ shape: o.dataset.shape, metal: id }, 34) + '<small>' + o.title + '</small>'; });
+        refresh();
+      });
+      mats.appendChild(b);
+    });
+    form.appendChild(mats);
+
+    const flameRow = el('label', 'cr-check');
+    const fl = el('input'); fl.type = 'checkbox'; fl.checked = !!draft.flame;
+    fl.addEventListener('change', () => { draft.flame = fl.checked; refresh(); });
+    flameRow.appendChild(fl); flameRow.appendChild(document.createTextNode(' Add a flame on top'));
+    form.appendChild(flameRow);
+
+    const actions = el('div', 'cr-actions');
+    const save = el('button', 'x-btn primary'); save.textContent = draft.id ? 'Save changes' : 'Put on the shelf';
+    save.addEventListener('click', () => {
+      if (!draft.name.trim()) { nameIn.focus(); nameIn.classList.add('err'); return; }
+      const data = { name: draft.name.trim(), desc: draft.desc.trim(), date: draft.date, shape: draft.shape, emblem: draft.emblem, label: draft.label, metal: draft.metal, flame: !!draft.flame };
+      if (draft.id) customCol.doc(draft.id).update(data);
+      else customCol.add({ ...data, createdAt: Date.now() });
+      draft = null; goAch('mine');
+    });
+    actions.appendChild(save);
+    if (draft.id) {
+      const del = el('button', 'x-btn ghost-danger'); del.textContent = 'Delete';
+      del.addEventListener('click', () => { if (confirm('Delete this trophy?')) { customCol.doc(draft.id).delete(); draft = null; goAch('mine'); } });
+      const cancel = el('button', 'x-btn'); cancel.textContent = 'Cancel';
+      cancel.addEventListener('click', () => { draft = null; goAch('mine'); });
+      actions.appendChild(cancel); actions.appendChild(del);
+    }
+    form.appendChild(actions);
+    refresh();
+  }
+
+  // ---------- detail ----------
+  function openDetail(key) {
+    if (key.startsWith('c:')) return openCustomDetail(key.slice(2));
+    const id = key.replace(/^a:/, '');
     const r = (achCache || computeAll()).find(x => x.a.id === id);
     if (!r) return;
     const n = r.events.length;
@@ -764,6 +1069,71 @@
     modal.querySelector('#a-m-close').addEventListener('click', () => modal.classList.remove('open'));
     modal.classList.add('open');
   }
+  function openCustomDetail(id) {
+    const c = customs.find(x => x.id === id); if (!c) return;
+    modal.innerHTML = `<div class="a-m-card" role="dialog" aria-label="${esc(c.name)}">
+      <div class="a-m-top">${trophySVG(customArt(c), 96)}<div><p class="a-m-name">${esc(c.name)}</p>
+      <p class="a-m-desc">${esc(c.desc || 'Custom trophy')}</p></div></div>
+      <div class="a-m-stats"><div><b>${fmtDay(c.date || tsDay(c.createdAt))}</b><span>Date</span></div>
+      <div><b>${esc((MATERIALS.find(m => m[0] === c.metal) || ['', 'Gold'])[1])}</b><span>Material</span></div><div><b>Custom</b><span>Type</span></div></div>
+      <div class="cr-actions"><button class="x-btn" id="a-m-edit">Edit</button><button class="x-btn ghost-danger" id="a-m-del">Delete</button><span style="flex:1"></span><button class="x-btn" id="a-m-close">Close</button></div></div>`;
+    modal.querySelector('#a-m-close').addEventListener('click', () => modal.classList.remove('open'));
+    modal.querySelector('#a-m-edit').addEventListener('click', () => {
+      modal.classList.remove('open');
+      draft = { id: c.id, name: c.name || '', desc: c.desc || '', date: c.date || dayStr(), shape: c.shape || 'cup', emblem: c.emblem || 'star', label: c.label || '', metal: c.metal || 'gold', flame: !!c.flame };
+      goAch('create');
+    });
+    modal.querySelector('#a-m-del').addEventListener('click', () => { if (confirm('Delete this trophy?')) { customCol.doc(c.id).delete(); modal.classList.remove('open'); } });
+    modal.classList.add('open');
+  }
+
+  // ================= settings + themes =================
+  const THEMES = [
+    { id: 'light', name: 'Light', c: ['#f6f5f2', '#ffffff', '#1c1e22', '#1d40c4'] },
+    { id: 'dark', name: 'Dark', c: ['#121317', '#191b20', '#0e0f12', '#3f5fd6'] },
+    { id: 'blood', name: 'Blood', c: ['#140708', '#1e0b0d', '#0c0405', '#c8102e'] },
+    { id: 'skyrim', name: 'Skyrim', c: ['#16140f', '#201d17', '#0e0d0a', '#b8975a'] }
+  ];
+  function applyTheme(id) {
+    if (id) document.documentElement.setAttribute('data-theme', id); else document.documentElement.removeAttribute('data-theme');
+    try { id ? localStorage.setItem('tgr_theme', id) : localStorage.removeItem('tgr_theme'); } catch (e) {}
+    if (id === 'skyrim' && !document.getElementById('skyrim-fonts')) {
+      const l = document.createElement('link'); l.id = 'skyrim-fonts'; l.rel = 'stylesheet';
+      l.href = 'https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Jost:wght@400;500;600;700&display=swap';
+      document.head.appendChild(l);
+    }
+    const t = THEMES.find(x => x.id === id);
+    document.querySelectorAll('meta[name="theme-color"]').forEach(m => { if (t) m.setAttribute('content', t.c[0]); else m.setAttribute('content', m.media && m.media.includes('dark') ? '#121317' : '#f6f5f2'); });
+  }
+  applyTheme((() => { try { return localStorage.getItem('tgr_theme'); } catch (e) { return null; } })());
+
+  const setModal = el('div'); setModal.id = 'set-modal'; document.body.appendChild(setModal);
+  setModal.addEventListener('click', e => { if (e.target === setModal) setModal.classList.remove('open'); });
+  function openSettings() {
+    const cur = document.documentElement.getAttribute('data-theme');
+    setModal.innerHTML = `<div class="a-m-card" role="dialog" aria-label="Settings"><p class="a-m-name">Settings</p>
+      <p class="a-m-sub" style="margin:0">Theme</p><div class="th-grid"></div>
+      <button class="th-system${cur ? '' : ' on'}">Match my device (light or dark)</button>
+      <p class="a-m-sub" style="margin:4px 0 0">Sync</p>
+      <button class="x-btn" id="set-sync" style="text-align:left">Sync with GitHub</button>
+      <button class="x-btn" id="set-close">Close</button></div>`;
+    const grid = setModal.querySelector('.th-grid');
+    THEMES.forEach(t => {
+      const b = el('button', 'th-card' + (cur === t.id ? ' on' : ''));
+      b.innerHTML = `<span class="th-prev" style="background:${t.c[0]}"><i style="background:${t.c[2]}"></i><em style="background:${t.c[1]}"><u style="background:${t.c[3]}"></u></em></span><b>${t.name}</b>`;
+      b.addEventListener('click', () => { applyTheme(t.id); openSettings(); });
+      grid.appendChild(b);
+    });
+    setModal.querySelector('.th-system').addEventListener('click', () => { applyTheme(null); openSettings(); });
+    setModal.querySelector('#set-sync').addEventListener('click', () => { setModal.classList.remove('open'); document.getElementById('sync-btn').click(); });
+    setModal.querySelector('#set-close').addEventListener('click', () => setModal.classList.remove('open'));
+    setModal.classList.add('open');
+  }
+  const gear = el('button', 'icon-btn', '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>');
+  gear.id = 'settings-btn'; gear.title = 'Settings';
+  gear.addEventListener('click', openSettings);
+  const hb = document.querySelector('#sidebar-header .header-btns');
+  if (hb) hb.insertBefore(gear, hb.firstChild);
 
   renderAll();
 })();
