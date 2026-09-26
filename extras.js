@@ -606,10 +606,7 @@
     folder: { label: 'ToDo folder', unit: 'per task', def: 10, pick: 'folder',
       hint: 'Priority multiplies XP: Highest ×2, High ×1.5, Low ×0.75, Lowest ×0.5. +5 XP if done before the deadline. Subfolders count too.' },
     board: { label: 'Territory board', unit: 'per square', def: 20, pick: 'board', hint: '+100 XP for every 10 in a row, +300 XP when the board is full.' },
-    gymWorkouts: { label: 'Gym workouts', unit: 'per workout', def: 25, hint: 'Every workout logged in Gym → Plan.' },
-    gymRecords: { label: 'Gym records', unit: 'per record', def: 40, hint: 'Every time you beat your best in Gym → Progress.' },
-    weight: { label: 'Weight logs', unit: 'per day', def: 5, hint: 'One reward per day you log your weight.' },
-    notes: { label: 'Notes', unit: 'per note', def: 10, hint: 'Notes with at least 50 characters.' }
+    gymRecords: { label: 'Gym records', unit: 'per record', def: 40, hint: 'Every time you beat your best in Gym → Progress.' }
   };
   const PRIO_MULT = { 2: 2, 1: 1.5, 0: 1, '-1': 0.75, '-2': 0.5 };
   const RANKS = [[1, 'Novice'], [5, 'Apprentice'], [10, 'Adept'], [15, 'Expert'], [20, 'Master'], [30, 'Grandmaster'], [40, 'Legend']];
@@ -661,7 +658,7 @@
     return ev;
   }
   function levelData(lv) {
-    const perSrc = (lv.sources || []).map(src => { const e = srcEvents(src); return { src, events: e, xp: e.reduce((a, x) => a + x.xp, 0) }; });
+    const perSrc = (lv.sources || []).map((src, idx) => ({ src, idx })).filter(x => SRC[x.src.type]).map(({ src, idx }) => { const e = srcEvents(src); return { src, idx, events: e, xp: e.reduce((a, x) => a + x.xp, 0) }; });
     const events = perSrc.flatMap(p => p.events).sort((a, b) => (a.day === b.day ? (a.ts || 0) - (b.ts || 0) : a.day < b.day ? -1 : 1));
     const total = events.reduce((a, e) => a + e.xp, 0);
     const today = dayStr();
@@ -780,13 +777,13 @@
       const inp = r.querySelector('input');
       inp.addEventListener('change', () => {
         const v = Math.max(0, Math.min(999, Math.round(+inp.value || 0)));
-        const sources = (lv.sources || []).map((s2, j) => j === i ? { ...s2, xp: v } : s2);
+        const sources = (lv.sources || []).map((s2, j) => j === p.idx ? { ...s2, xp: v } : s2);
         levelsCol.doc(lv.id).update({ sources });
       });
       const rm = el('button', 'lv-rm', I.trash); rm.title = 'Unlink';
       rm.addEventListener('click', () => {
         if (!confirm('Unlink "' + cfg.label + (target ? ': ' + target : '') + '" from this level?')) return;
-        levelsCol.doc(lv.id).update({ sources: (lv.sources || []).filter((_, j) => j !== i) });
+        levelsCol.doc(lv.id).update({ sources: (lv.sources || []).filter((_, j) => j !== p.idx) });
       });
       r.appendChild(rm);
       list.appendChild(r);
@@ -1719,7 +1716,7 @@
   }
   applyTheme((() => { try { return localStorage.getItem('tgr_theme'); } catch (e) { return null; } })());
 
-  const APP_VERSION = '8';
+  const APP_VERSION = '9';
   async function checkForUpdates(btn, msg) {
     btn.disabled = true; btn.textContent = 'Checking...';
     try {
