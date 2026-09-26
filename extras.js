@@ -296,6 +296,35 @@
     .lv-src-main { flex-basis: 100%; }
     .lv-earned { margin-left: auto; }
   }
+
+  /* profile */
+  #prof-card { display: flex; align-items: center; gap: 10px; margin: 12px 8px 2px; padding: 8px 8px; border-radius: 10px; cursor: pointer; flex-shrink: 0; }
+  #prof-card:hover, #prof-card.active { background: var(--sidebar-active); }
+  #prof-card + #sidebar-header { padding-top: 8px; }
+  .prof-av { border-radius: 50%; object-fit: cover; flex-shrink: 0; display: block; }
+  .prof-av-empty { display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--accent), #9b5de5);
+    color: #fff; font-weight: 800; }
+  .prof-meta { display: flex; flex-direction: column; min-width: 0; }
+  .prof-meta b { color: var(--sidebar-text); font-size: 14.5px; }
+  .prof-meta span { color: var(--sidebar-text-dim); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #page-profile { max-width: 640px; }
+  .prof-top { display: flex; gap: 22px; align-items: center; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 18px; padding: 22px; }
+  .prof-av-btn { position: relative; background: none; border: none; padding: 0; cursor: pointer; border-radius: 50%; flex-shrink: 0; }
+  .prof-av-btn .prof-av { box-shadow: 0 0 0 3px var(--bg-elevated), 0 0 0 5px var(--accent); }
+  .prof-cam { position: absolute; right: -2px; bottom: -2px; width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: #fff;
+    display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 3px var(--bg-elevated); }
+  .prof-info { flex: 1; min-width: 0; }
+  .prof-info h1 { margin: 0 0 2px; font-size: 28px; }
+  .prof-stats { display: flex; gap: 8px; margin-top: 4px; }
+  .prof-stats div { background: var(--bg); border-radius: 10px; padding: 7px 12px; }
+  .prof-stats b { display: block; font-size: 16px; font-variant-numeric: tabular-nums; }
+  .prof-stats span { font-size: 11.5px; color: var(--text-dim); }
+  .prof-rm { background: none; border: none; color: var(--text-dim); font-size: 12.5px; cursor: pointer; margin-top: 8px; padding: 4px 2px; font-family: inherit; }
+  .prof-rm:hover { color: var(--danger); }
+  .prof-levels { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+  .prof-lv { display: flex; gap: 12px; align-items: center; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; }
+  :root[data-theme="skyrim"] .prof-info h1, :root[data-theme="skyrim"] .prof-meta b { font-family: 'Cinzel', Georgia, serif; letter-spacing: .05em; }
+  @media (max-width: 520px) { .prof-top { flex-direction: column; text-align: center; } .prof-stats { justify-content: center; } }
   @media (max-width: 520px) { .t-stats { grid-template-columns: repeat(2, 1fr); } .t-grid { gap: 4px; } }
   `;
   const styleEl = document.createElement('style');
@@ -347,10 +376,13 @@
   cellsCol.orderBy('filledAt', 'asc').onSnapshot(s => { cells = s.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); });
   const customCol = SyncDB.collection('customTrophies');
   const settingsCol = SyncDB.collection('appSettings');
-  let customs = [], shelfLayout = {};
+  let customs = [], shelfLayout = {}, profile = {};
   customCol.orderBy('createdAt', 'asc').onSnapshot(s => { customs = s.docs.map(d => ({ id: d.id, ...d.data() })); if (currentPage === 'achievements') renderAll(); });
   settingsCol.orderBy('k', 'asc').onSnapshot(s => {
     const d = s.docs.find(x => x.id === 'shelf'); shelfLayout = (d && d.data().slots) || {};
+    const pr = s.docs.find(x => x.id === 'profile'); profile = pr ? pr.data() : {};
+    if (window.renderProfileCard) window.renderProfileCard();
+    if (currentPage === 'profile' && window.renderProfilePage) window.renderProfilePage();
     if (currentPage === 'achievements' && aTab === 'mine' && !dragState) renderAchievements();
   });
   let draft = null, arranging = false, selectedKey = null, dragState = null;
@@ -864,6 +896,81 @@
     try { localStorage.setItem('tgr_lvl_seen', JSON.stringify(next)); } catch (e) {}
   }
 
+  // ================= profile =================
+  const PROFILE_NAME = 'Tamer';
+  const profCard = el('div'); profCard.id = 'prof-card';
+  const sbEl = document.getElementById('sidebar');
+  sbEl.insertBefore(profCard, sbEl.firstChild);
+  const avatarInput = el('input'); avatarInput.type = 'file'; avatarInput.accept = 'image/*'; avatarInput.style.display = 'none';
+  document.body.appendChild(avatarInput);
+  avatarInput.addEventListener('change', () => {
+    const f = avatarInput.files && avatarInput.files[0]; avatarInput.value = '';
+    if (!f) return;
+    const url = URL.createObjectURL(f);
+    const img = new Image();
+    img.onload = () => {
+      const S = 256, c = document.createElement('canvas'); c.width = S; c.height = S;
+      const side = Math.min(img.width, img.height);
+      c.getContext('2d').drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, S, S);
+      URL.revokeObjectURL(url);
+      settingsCol.doc('profile').set({ ...profile, k: 'profile', avatar: c.toDataURL('image/jpeg', 0.85) });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); alert('Could not read this image.'); };
+    img.src = url;
+  });
+  function avatarHTML(size) {
+    if (profile.avatar) return `<img class="prof-av" src="${profile.avatar}" alt="" style="width:${size}px;height:${size}px">`;
+    return `<span class="prof-av prof-av-empty" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.42)}px">T</span>`;
+  }
+  function accountLevel() {
+    return levelOf(levels.reduce((a, lv) => a + levelData(lv).total, 0));
+  }
+  window.renderProfileCard = function () {
+    const acc = accountLevel();
+    profCard.className = currentPage === 'profile' ? 'active' : '';
+    profCard.innerHTML = avatarHTML(34) + `<div class="prof-meta"><b>${PROFILE_NAME}</b><span>${levels.length ? 'Level ' + acc.level + ' · ' + rankOf(acc.level) : 'No levels yet'}</span></div>`;
+  };
+  profCard.addEventListener('click', () => { currentPage = 'profile'; renderAll(); autoCollapseOnMobile(); });
+
+  const pageP = document.createElement('div'); pageP.id = 'page-profile'; pageP.className = 'page-wrap'; pageP.style.display = 'none';
+  contentEl.appendChild(pageP);
+  window.renderProfilePage = function () {
+    const acc = accountLevel();
+    const trophies = (achCache || computeAll()).reduce((a, r) => a + r.events.length, 0) + customs.length;
+    pageP.innerHTML = '';
+    const top = el('div', 'prof-top');
+    const avBtn = el('button', 'prof-av-btn', avatarHTML(104) + '<span class="prof-cam"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 8H7.5L9 6H15L16.5 8H20V19H4Z"/><circle cx="12" cy="13" r="3.2"/></svg></span>');
+    avBtn.title = 'Change photo'; avBtn.setAttribute('aria-label', 'Change photo');
+    avBtn.addEventListener('click', () => avatarInput.click());
+    const info = el('div', 'prof-info');
+    info.innerHTML = `<h1>${PROFILE_NAME}</h1>
+      <div class="lv-rank">${levels.length ? 'Level ' + acc.level + ' · ' + rankOf(acc.level) : 'Create a level to start'}</div>
+      ${levels.length ? `<div class="lv-bar" style="--lv:var(--accent)"><i style="width:${Math.round(acc.into / acc.need * 100)}%"></i></div>
+      <div class="lv-next">${acc.into} / ${acc.need} XP to level ${acc.level + 1}</div>` : ''}
+      <div class="prof-stats"><div><b>${levels.reduce((a, lv) => a + levelData(lv).total, 0)}</b><span>Total XP</span></div><div><b>${trophies}</b><span>Trophies</span></div></div>`;
+    top.appendChild(avBtn); top.appendChild(info);
+    pageP.appendChild(top);
+    if (profile.avatar) {
+      const rm = el('button', 'prof-rm'); rm.textContent = 'Remove photo';
+      rm.addEventListener('click', () => { const { avatar, ...rest } = profile; settingsCol.doc('profile').set({ ...rest, k: 'profile' }); });
+      pageP.appendChild(rm);
+    }
+    if (levels.length) {
+      const h = el('div', 'lv-sec'); h.textContent = 'Levels'; h.style.marginTop = '22px'; pageP.appendChild(h);
+      const list = el('div', 'prof-levels');
+      levels.slice().sort((a, b) => (a.order || 0) - (b.order || 0)).forEach(lv => {
+        const d = levelData(lv), col = lv.color || COLORS[0];
+        const r = el('div', 'prof-lv');
+        r.innerHTML = ringSVG(d, 58, col) + `<div class="lv-card-body"><div class="lv-card-name">${iconSVG(lv.icon || 'star', 14)}<span>${esc(lv.name)}</span></div>
+          <div class="lv-rank">${rankOf(d.level)}</div>
+          <div class="a-bar"><i style="width:${Math.round(d.into / d.need * 100)}%;background:${col}"></i></div>
+          <div class="a-bar-label">${d.into} / ${d.need} XP · ${d.total} XP total</div></div>`;
+        list.appendChild(r);
+      });
+      pageP.appendChild(list);
+    }
+  };
+
   // ================= navigation =================
   function goTerritory(boardId) { currentPage = 'territory'; tState.boardId = boardId || null; renderAll(); autoCollapseOnMobile(); }
   function goAch(tab) { currentPage = 'achievements'; aTab = tab; renderAll(); autoCollapseOnMobile(); }
@@ -977,7 +1084,7 @@
   };
 
   window.renderExtraBreadcrumbs = function (bc) {
-    if (!['territory', 'achievements', 'notes', 'levels'].includes(currentPage)) return false;
+    if (!['territory', 'achievements', 'notes', 'levels', 'profile'].includes(currentPage)) return false;
     bc.innerHTML = '';
     const crumb = (text, current, onClick) => {
       const c = el('span', 'crumb' + (current ? ' current' : '')); c.textContent = text;
@@ -985,6 +1092,7 @@
       bc.appendChild(c);
     };
     const sep = () => { const s = el('span', 'crumb-sep'); s.textContent = '/'; bc.appendChild(s); };
+    if (currentPage === 'profile') { crumb('Profile', true); return true; }
     if (currentPage === 'levels') {
       const lv = levels.find(x => x.id === lState.id);
       crumb('Levels', !lv, () => goLevel(null));
@@ -1012,6 +1120,9 @@
     pageT.style.display = currentPage === 'territory' ? 'block' : 'none';
     pageA.style.display = currentPage === 'achievements' ? 'block' : 'none';
     pageN.style.display = currentPage === 'notes' ? 'block' : 'none';
+    pageP.style.display = currentPage === 'profile' ? 'block' : 'none';
+    if (currentPage === 'profile') window.renderProfilePage();
+    window.renderProfileCard();
     pageL.style.display = currentPage === 'levels' ? 'block' : 'none';
     if (currentPage === 'levels') { const ae = document.activeElement; if (!(ae && pageL.contains(ae) && (ae.tagName === 'INPUT' || ae.tagName === 'SELECT'))) renderLevels(); }
     if (currentPage !== 'notes') pageN.dataset.noteId = '';
@@ -1716,7 +1827,7 @@
   }
   applyTheme((() => { try { return localStorage.getItem('tgr_theme'); } catch (e) { return null; } })());
 
-  const APP_VERSION = '9';
+  const APP_VERSION = '10';
   async function checkForUpdates(btn, msg) {
     btn.disabled = true; btn.textContent = 'Checking...';
     try {
