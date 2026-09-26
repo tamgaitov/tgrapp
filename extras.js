@@ -249,6 +249,53 @@
   .row-more:hover { background: rgba(255,255,255,.12); color: #fff; }
   #n-menu button svg { flex-shrink: 0; opacity: .8; }
   :root[data-theme="skyrim"] .n-title { font-family: 'Cinzel', Georgia, serif; }
+
+  /* levels */
+  #page-levels { max-width: 720px; }
+  .lv-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+  .lv-card { display: flex; gap: 12px; align-items: center; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 14px;
+    padding: 12px 14px; cursor: pointer; text-align: left; color: var(--text); font-family: inherit; }
+  .lv-card:hover { border-color: var(--accent); }
+  .lv-card-body { flex: 1; min-width: 0; }
+  .lv-card-name { display: flex; gap: 6px; align-items: center; font-weight: 700; font-size: 15px; }
+  .lv-rank { font-size: 12px; color: var(--text-dim); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; margin: 2px 0 7px; }
+  .lv-rank.big { font-size: 13px; margin: 0 0 8px; }
+  .lv-hero { display: flex; gap: 20px; align-items: center; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 16px;
+    padding: 18px 20px; margin-bottom: 14px; }
+  .lv-hero-body { flex: 1; min-width: 0; }
+  .lv-bar { height: 10px; border-radius: 6px; background: var(--border); overflow: hidden; }
+  .lv-bar i { display: block; height: 100%; border-radius: 6px; background: var(--lv); transition: width .4s ease; }
+  .lv-next { font-size: 13px; color: var(--text-dim); margin: 6px 0 12px; font-variant-numeric: tabular-nums; }
+  .lv-mini { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .lv-mini div { background: var(--bg); border-radius: 10px; padding: 8px 10px; }
+  .lv-mini b { display: block; font-size: 17px; font-variant-numeric: tabular-nums; }
+  .lv-mini span { font-size: 11.5px; color: var(--text-dim); }
+  .lv-sec { font-size: 13px; font-weight: 600; color: var(--text-dim); margin: 0 0 8px; }
+  .lv-srcs { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .lv-src { display: flex; gap: 12px; align-items: center; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; }
+  .lv-src-main { flex: 1; min-width: 0; }
+  .lv-src-main b { display: block; font-size: 14px; }
+  .lv-src-main span { font-size: 12px; color: var(--text-dim); }
+  .lv-xp { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .lv-xp input { width: 58px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; color: var(--text);
+    font-size: 14px; font-weight: 700; font-family: inherit; outline: none; text-align: center; }
+  .lv-xp input:focus { border-color: var(--accent); }
+  .lv-xp small { font-size: 11.5px; color: var(--text-dim); max-width: 64px; line-height: 1.2; }
+  .lv-earned { font-weight: 700; font-size: 13.5px; min-width: 64px; text-align: right; font-variant-numeric: tabular-nums; }
+  .lv-rm { background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 6px; border-radius: 6px; display: flex; }
+  .lv-rm:hover { color: var(--danger); background: var(--accent-soft); }
+  .lv-add { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--bg-elevated); border: 1px dashed var(--border);
+    border-radius: 12px; padding: 12px; margin-bottom: 22px; }
+  .lv-add select { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; color: var(--text);
+    font-size: 14px; font-family: inherit; max-width: 100%; }
+  .lv-plus { font-style: normal; color: #33c27a; font-weight: 700; }
+  @media (max-width: 560px) {
+    .lv-hero { flex-direction: column; align-items: stretch; text-align: left; }
+    .lv-hero > svg { align-self: center; }
+    .lv-src { flex-wrap: wrap; }
+    .lv-src-main { flex-basis: 100%; }
+    .lv-earned { margin-left: auto; }
+  }
   @media (max-width: 520px) { .t-stats { grid-template-columns: repeat(2, 1fr); } .t-grid { gap: 4px; } }
   `;
   const styleEl = document.createElement('style');
@@ -371,7 +418,8 @@
   const MENU_ICONS = {
     folder: () => I.folder, note: () => I.note, trash: () => I.trash,
     icon: () => '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M8 1.8L9.8 5.7L14 6.1L10.8 8.9L11.8 13L8 10.8L4.2 13L5.2 8.9L2 6.1L6.2 5.7Z"/></svg>',
-    board: () => I.territory
+    board: () => I.territory,
+    level: () => I.level
   };
   function openCtxMenu(x, y, items) {
     ctxMenu.innerHTML = ''; ctxMenu.dataset.owner = '';
@@ -548,6 +596,277 @@
   }
   function grow(t) { t.style.height = 'auto'; t.style.height = Math.max(260, t.scrollHeight + 4) + 'px'; }
 
+  // ================= levels =================
+  const levelsCol = SyncDB.collection('levels');
+  let levels = [];
+  let lState = { id: null, creating: false, adding: false };
+  levelsCol.orderBy('createdAt', 'asc').onSnapshot(s => { levels = s.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); });
+
+  const SRC = {
+    folder: { label: 'ToDo folder', unit: 'per task', def: 10, pick: 'folder',
+      hint: 'Priority multiplies XP: Highest ×2, High ×1.5, Low ×0.75, Lowest ×0.5. +5 XP if done before the deadline. Subfolders count too.' },
+    board: { label: 'Territory board', unit: 'per square', def: 20, pick: 'board', hint: '+100 XP for every 10 in a row, +300 XP when the board is full.' },
+    gymWorkouts: { label: 'Gym workouts', unit: 'per workout', def: 25, hint: 'Every workout logged in Gym → Plan.' },
+    gymRecords: { label: 'Gym records', unit: 'per record', def: 40, hint: 'Every time you beat your best in Gym → Progress.' },
+    weight: { label: 'Weight logs', unit: 'per day', def: 5, hint: 'One reward per day you log your weight.' },
+    notes: { label: 'Notes', unit: 'per note', def: 10, hint: 'Notes with at least 50 characters.' }
+  };
+  const PRIO_MULT = { 2: 2, 1: 1.5, 0: 1, '-1': 0.75, '-2': 0.5 };
+  const RANKS = [[1, 'Novice'], [5, 'Apprentice'], [10, 'Adept'], [15, 'Expert'], [20, 'Master'], [30, 'Grandmaster'], [40, 'Legend']];
+  const needFor = L => Math.round(60 * Math.pow(L, 1.5) / 5) * 5;
+  function levelOf(total) {
+    let L = 1, rest = total;
+    while (rest >= needFor(L)) { rest -= needFor(L); L++; }
+    return { level: L, into: rest, need: needFor(L), total };
+  }
+  const rankOf = L => RANKS.filter(r => L >= r[0]).pop()[1];
+
+  function folderTree(id) {
+    const out = [id];
+    const walk = fid => allFolders.filter(f => (f.parentId || null) === fid).forEach(c => { out.push(c.id); walk(c.id); });
+    walk(id);
+    return out;
+  }
+  function srcTargetName(src) {
+    if (src.type === 'folder') { const f = allFolders.find(x => x.id === src.id); return f ? f.name : 'Deleted folder'; }
+    if (src.type === 'board') { const b = boards.find(x => x.id === src.id); return b ? b.name : 'Deleted board'; }
+    return '';
+  }
+  function srcEvents(src) {
+    const xp = Math.max(0, +src.xp || 0), ev = [];
+    if (src.type === 'folder') {
+      const ids = new Set(folderTree(src.id));
+      allTasks.filter(t => t.done && t.completedAt && ids.has(t.folderId || null)).forEach(t => {
+        const onTime = t.deadline && tsDay(t.completedAt) <= t.deadline ? 5 : 0;
+        ev.push({ day: tsDay(t.completedAt), ts: t.completedAt, xp: Math.round(xp * (PRIO_MULT[t.priority || 0] || 1)) + onTime, label: t.text });
+      });
+    } else if (src.type === 'board') {
+      const b = boards.find(x => x.id === src.id); if (!b) return ev;
+      const st = boardStats(b);
+      st.cs.forEach(c => ev.push({ day: c.date, ts: c.filledAt, xp, label: b.name + ' square' }));
+      st.runs.forEach(r => { for (let k = 10; k <= r.days.length; k += 10) ev.push({ day: numToStr(r.days[k - 1]), xp: 100, label: b.name + ': ' + k + ' in a row' }); });
+      if (st.filled >= 100) ev.push({ day: st.cs.map(c => c.date).sort()[99], xp: 300, label: b.name + ' conquered' });
+    } else if (src.type === 'gymWorkouts') {
+      allGymLogs.forEach(l => ev.push({ day: tsDay(l.date), ts: l.date, xp, label: 'Workout' }));
+    } else if (src.type === 'gymRecords') {
+      allGymPEx.forEach(ex => { let max = null;
+        allGymPLogs.filter(l => l.exerciseId === ex.id).sort((a, b) => a.date - b.date).forEach(l => {
+          const v = +l.value; if (max !== null && v > max) ev.push({ day: tsDay(l.date), ts: l.date, xp, label: 'Record: ' + ex.name + ' ' + v + ' kg' });
+          if (max === null || v > max) max = v; }); });
+    } else if (src.type === 'weight') {
+      [...new Set(allWeights.map(w => tsDay(w.date)))].forEach(d => ev.push({ day: d, xp, label: 'Weight logged' }));
+    } else if (src.type === 'notes') {
+      notes.filter(n => (n.body || '').length >= 50).forEach(n => ev.push({ day: tsDay(n.createdAt), ts: n.createdAt, xp, label: 'Note: ' + (n.title || 'Untitled') }));
+    }
+    return ev;
+  }
+  function levelData(lv) {
+    const perSrc = (lv.sources || []).map(src => { const e = srcEvents(src); return { src, events: e, xp: e.reduce((a, x) => a + x.xp, 0) }; });
+    const events = perSrc.flatMap(p => p.events).sort((a, b) => (a.day === b.day ? (a.ts || 0) - (b.ts || 0) : a.day < b.day ? -1 : 1));
+    const total = events.reduce((a, e) => a + e.xp, 0);
+    const today = dayStr();
+    const weekAgo = numToStr(dayNum(today) - 6);
+    return { ...levelOf(total), perSrc, events, today: events.filter(e => e.day === today).reduce((a, e) => a + e.xp, 0),
+      week: events.filter(e => e.day >= weekAgo).reduce((a, e) => a + e.xp, 0) };
+  }
+
+  function ringSVG(d, size, color) {
+    const r = 44, c = 2 * Math.PI * r, pct = d.need ? d.into / d.need : 0;
+    return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true">
+      <circle cx="50" cy="50" r="${r}" fill="none" stroke="var(--border)" stroke-width="7"/>
+      <circle cx="50" cy="50" r="${r}" fill="none" stroke="${color}" stroke-width="7" stroke-linecap="round"
+        stroke-dasharray="${(c * pct).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 50 50)"/>
+      <text x="50" y="44" text-anchor="middle" font-size="11" font-weight="700" fill="var(--text-dim)" letter-spacing="1.5">LVL</text>
+      <text x="50" y="67" text-anchor="middle" font-size="${d.level >= 100 ? 22 : 28}" font-weight="800" fill="var(--text)">${d.level}</text></svg>`;
+  }
+
+  function goLevel(id) { currentPage = 'levels'; lState.id = id || null; lState.adding = false; renderAll(); autoCollapseOnMobile(); }
+  function createLevel(name) {
+    const now = Date.now();
+    return levelsCol.add({ name, icon: 'star', color: COLORS[levels.length % COLORS.length], sources: [], createdAt: now, order: now });
+  }
+  function deleteLevel(lv) {
+    if (!confirm('Delete level "' + lv.name + '"? Your tasks and boards stay, only this level goes.')) return;
+    levelsCol.doc(lv.id).delete(); lState.id = null; renderAll();
+  }
+
+  const pageL = document.createElement('div'); pageL.id = 'page-levels'; pageL.className = 'page-wrap'; pageL.style.display = 'none';
+  contentEl.appendChild(pageL);
+
+  function renderLevels() {
+    const lv = levels.find(x => x.id === lState.id);
+    if (lState.id && !lv) lState.id = null;
+    if (lv) renderLevel(lv); else renderLevelsOverview();
+  }
+  function renderLevelsOverview() {
+    pageL.innerHTML = '';
+    const head = el('div', 'x-head');
+    const h = el('h1', 'x-title'); h.textContent = 'Levels';
+    const nb = el('button', 'x-btn primary'); nb.textContent = 'New level';
+    nb.addEventListener('click', () => { lState.creating = true; renderLevelsOverview(); });
+    head.appendChild(h); head.appendChild(nb); pageL.appendChild(head);
+    if (lState.creating) {
+      const f = el('div', 'x-form');
+      const inp = el('input'); inp.placeholder = 'Level name, e.g. Personal, Work, Gym'; inp.maxLength = 30;
+      const ok = el('button', 'x-btn primary'); ok.textContent = 'Create';
+      const cancel = el('button', 'x-btn'); cancel.textContent = 'Cancel';
+      const submit = () => { const v = inp.value.trim(); if (!v) return; lState.creating = false; createLevel(v).then(r => { lState.adding = true; currentPage = 'levels'; lState.id = r.id; renderAll(); }); };
+      ok.addEventListener('click', submit);
+      cancel.addEventListener('click', () => { lState.creating = false; renderLevelsOverview(); });
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') cancel.click(); });
+      f.appendChild(inp); f.appendChild(ok); f.appendChild(cancel); pageL.appendChild(f);
+      setTimeout(() => inp.focus(), 30);
+    }
+    if (!levels.length) {
+      const e = el('div', 'x-empty'); e.textContent = 'Create a level and link it to a ToDo folder, a Territory board or your gym. Doing things there gives it XP.';
+      pageL.appendChild(e); return;
+    }
+    const grid = el('div', 'lv-cards');
+    levels.slice().sort((a, b) => (a.order || 0) - (b.order || 0)).forEach(lv => {
+      const d = levelData(lv), col = lv.color || COLORS[0];
+      const card = el('button', 'lv-card');
+      card.innerHTML = ringSVG(d, 64, col) + `<div class="lv-card-body"><div class="lv-card-name">${iconSVG(lv.icon || 'star', 14)}<span>${esc(lv.name)}</span></div>
+        <div class="lv-rank">${rankOf(d.level)}</div>
+        <div class="a-bar"><i style="width:${Math.round(d.into / d.need * 100)}%;background:${col}"></i></div>
+        <div class="a-bar-label">${d.into} / ${d.need} XP</div></div>`;
+      card.addEventListener('click', () => goLevel(lv.id));
+      grid.appendChild(card);
+    });
+    pageL.appendChild(grid);
+  }
+
+  function renderLevel(lv) {
+    const d = levelData(lv), col = lv.color || COLORS[0];
+    pageL.innerHTML = '';
+    const head = el('div', 'x-head');
+    const iconBtn = el('button', 't-icon-btn', iconSVG(lv.icon || 'star', 22)); iconBtn.title = 'Change icon';
+    iconBtn.addEventListener('click', e => { e.stopPropagation(); openIconPopover(iconBtn, ic => levelsCol.doc(lv.id).update({ icon: ic })); });
+    const nameIn = el('input', 't-name-input'); nameIn.value = lv.name; nameIn.maxLength = 30;
+    const saveName = () => { const v = nameIn.value.trim(); if (v && v !== lv.name) levelsCol.doc(lv.id).update({ name: v }); else nameIn.value = lv.name; };
+    nameIn.addEventListener('blur', saveName);
+    nameIn.addEventListener('keydown', e => { if (e.key === 'Enter') nameIn.blur(); });
+    const del = el('button', 'x-btn ghost-danger'); del.textContent = 'Delete';
+    del.addEventListener('click', () => deleteLevel(lv));
+    head.appendChild(iconBtn); head.appendChild(nameIn); head.appendChild(del);
+    pageL.appendChild(head);
+
+    const hero = el('div', 'lv-hero');
+    hero.style.setProperty('--lv', col);
+    hero.innerHTML = ringSVG(d, 116, col) + `<div class="lv-hero-body">
+      <div class="lv-rank big">${rankOf(d.level)}</div>
+      <div class="lv-bar"><i style="width:${Math.round(d.into / d.need * 100)}%"></i></div>
+      <div class="lv-next">${d.into} / ${d.need} XP to level ${d.level + 1}</div>
+      <div class="lv-mini"><div><b>${d.total}</b><span>Total XP</span></div><div><b>+${d.week}</b><span>Last 7 days</span></div><div><b>+${d.today}</b><span>Today</span></div></div></div>`;
+    pageL.appendChild(hero);
+
+    const colors = el('div', 't-colors'); colors.style.margin = '0 0 20px';
+    COLORS.forEach(c => {
+      const b = el('button', 't-color' + (col === c ? ' on' : '')); b.style.background = c; b.title = 'Color';
+      b.addEventListener('click', () => levelsCol.doc(lv.id).update({ color: c }));
+      colors.appendChild(b);
+    });
+    pageL.appendChild(colors);
+
+    const sh = el('div', 'lv-sec'); sh.textContent = 'Linked to'; pageL.appendChild(sh);
+    const list = el('div', 'lv-srcs');
+    if (!d.perSrc.length) { const e = el('div', 't-hint'); e.textContent = 'Nothing linked yet. Add a source below, then XP starts counting, including everything you already did there.'; list.appendChild(e); }
+    d.perSrc.forEach((p, i) => {
+      const cfg = SRC[p.src.type] || { label: p.src.type, unit: '' };
+      const r = el('div', 'lv-src');
+      const target = srcTargetName(p.src);
+      r.innerHTML = `<div class="lv-src-main"><b>${esc(cfg.label)}${target ? ': ' + esc(target) : ''}</b><span>${esc(cfg.hint || '')}</span></div>
+        <label class="lv-xp"><input type="number" min="0" max="999" value="${+p.src.xp || 0}"><small>XP ${esc(cfg.unit)}</small></label>
+        <div class="lv-earned">${p.xp} XP</div>`;
+      const inp = r.querySelector('input');
+      inp.addEventListener('change', () => {
+        const v = Math.max(0, Math.min(999, Math.round(+inp.value || 0)));
+        const sources = (lv.sources || []).map((s2, j) => j === i ? { ...s2, xp: v } : s2);
+        levelsCol.doc(lv.id).update({ sources });
+      });
+      const rm = el('button', 'lv-rm', I.trash); rm.title = 'Unlink';
+      rm.addEventListener('click', () => {
+        if (!confirm('Unlink "' + cfg.label + (target ? ': ' + target : '') + '" from this level?')) return;
+        levelsCol.doc(lv.id).update({ sources: (lv.sources || []).filter((_, j) => j !== i) });
+      });
+      r.appendChild(rm);
+      list.appendChild(r);
+    });
+    pageL.appendChild(list);
+
+    if (lState.adding) {
+      const f = el('div', 'lv-add');
+      const typeSel = el('select');
+      Object.keys(SRC).forEach(k => { const o = el('option'); o.value = k; o.textContent = SRC[k].label; typeSel.appendChild(o); });
+      const tgtSel = el('select');
+      const xpIn = el('input'); xpIn.type = 'number'; xpIn.min = '0'; xpIn.max = '999';
+      const unit = el('small');
+      const fill = () => {
+        const cfg = SRC[typeSel.value];
+        xpIn.value = cfg.def; unit.textContent = 'XP ' + cfg.unit;
+        tgtSel.innerHTML = '';
+        if (cfg.pick === 'folder') {
+          const add = (parent, depth) => allFolders.filter(x => (x.parentId || null) === parent).forEach(x => {
+            const o = el('option'); o.value = x.id; o.textContent = '\u00a0\u00a0'.repeat(depth) + x.name; tgtSel.appendChild(o); add(x.id, depth + 1); });
+          add(null, 0);
+        } else if (cfg.pick === 'board') {
+          boards.forEach(b => { const o = el('option'); o.value = b.id; o.textContent = b.name; tgtSel.appendChild(o); });
+        }
+        tgtSel.style.display = cfg.pick ? '' : 'none';
+        ok.disabled = !!cfg.pick && !tgtSel.options.length;
+        note.textContent = cfg.pick && !tgtSel.options.length ? (cfg.pick === 'folder' ? 'Create a ToDo folder first.' : 'Create a Territory board first.') : (cfg.hint || '');
+      };
+      const ok = el('button', 'x-btn primary'); ok.textContent = 'Link';
+      const cancel = el('button', 'x-btn'); cancel.textContent = 'Cancel';
+      const note = el('div', 't-hint'); note.style.flexBasis = '100%';
+      typeSel.addEventListener('change', fill);
+      ok.addEventListener('click', () => {
+        const cfg = SRC[typeSel.value];
+        const src = { type: typeSel.value, xp: Math.max(0, Math.min(999, Math.round(+xpIn.value || 0))) };
+        if (cfg.pick) src.id = tgtSel.value;
+        lState.adding = false;
+        levelsCol.doc(lv.id).update({ sources: (lv.sources || []).concat([src]) });
+      });
+      cancel.addEventListener('click', () => { lState.adding = false; renderLevel(lv); });
+      const xpWrap = el('label', 'lv-xp'); xpWrap.appendChild(xpIn); xpWrap.appendChild(unit);
+      f.appendChild(typeSel); f.appendChild(tgtSel); f.appendChild(xpWrap); f.appendChild(ok); f.appendChild(cancel); f.appendChild(note);
+      pageL.appendChild(f);
+      fill();
+    } else {
+      const add = el('button', 'x-btn'); add.textContent = '+ Link a source'; add.style.marginBottom = '22px';
+      add.addEventListener('click', () => { lState.adding = true; renderLevel(lv); });
+      pageL.appendChild(add);
+    }
+
+    if (d.events.length) {
+      const hh = el('div', 'lv-sec'); hh.textContent = 'Recent XP'; pageL.appendChild(hh);
+      const hist = el('div', 'a-m-hist');
+      d.events.slice(-20).reverse().forEach(e => {
+        const r = el('div'); r.innerHTML = `<b style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(e.label)}</b><span style="white-space:nowrap"><em class="lv-plus">+${e.xp}</em> · ${fmtDay(e.day)}</span>`;
+        hist.appendChild(r);
+      });
+      pageL.appendChild(hist);
+    }
+    const curve = el('div', 't-hint'); curve.style.marginTop = '14px';
+    curve.textContent = 'Each level needs more XP than the one before: level 2 needs ' + needFor(1) + ' XP, level 5 about ' +
+      [1, 2, 3, 4].reduce((a, L) => a + needFor(L), 0) + ' in total, level 10 about ' + [1, 2, 3, 4, 5, 6, 7, 8, 9].reduce((a, L) => a + needFor(L), 0) + '.';
+    pageL.appendChild(curve);
+  }
+
+  // level-up toasts
+  function checkLevelUps() {
+    let seen = {};
+    try { seen = JSON.parse(localStorage.getItem('tgr_lvl_seen') || '{}') || {}; } catch (e) {}
+    const next = {};
+    levels.forEach(lv => {
+      const d = levelData(lv); next[lv.id] = d.level;
+      if (seen[lv.id] !== undefined && d.level > seen[lv.id]) {
+        const col = lv.color || COLORS[0];
+        toastQueue.push({ html: ringSVG(d, 42, col) + '<div><small>Level up</small><b>' + esc(lv.name) + ': level ' + d.level + '</b></div>', open: () => goLevel(lv.id) });
+      }
+    });
+    try { localStorage.setItem('tgr_lvl_seen', JSON.stringify(next)); } catch (e) {}
+  }
+
   // ================= navigation =================
   function goTerritory(boardId) { currentPage = 'territory'; tState.boardId = boardId || null; renderAll(); autoCollapseOnMobile(); }
   function goAch(tab) { currentPage = 'achievements'; aTab = tab; renderAll(); autoCollapseOnMobile(); }
@@ -563,6 +882,7 @@
     notes: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M6 3H15L19 7V21H6Z"/><path d="M15 3V7H19"/><path d="M9 11H16M9 14.5H16M9 18H13"/></svg>',
     note: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M4 1.8H10L12.5 4.3V14.2H4Z"/><path d="M6 7.5H10.5M6 10H10.5"/></svg>',
     folder: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 6.5C3 5.7 3.7 5 4.5 5H9L11 7H19.5C20.3 7 21 7.7 21 8.5V17.5C21 18.3 20.3 19 19.5 19H4.5C3.7 19 3 18.3 3 17.5Z"/></svg>',
+    level: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3L20 7.5V16.5L12 21L4 16.5V7.5Z"/><path d="M8.5 13.5L12 10L15.5 13.5"/></svg>',
     plus: '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>'
   };
   function row(opts) {
@@ -606,6 +926,27 @@
       menu: () => notesMenuItems(null)
     }));
     if (nOpen) renderNotesTree(list, null, 1);
+    const lOpen = expanded.has('__lvl__');
+    list.appendChild(row({
+      icon: I.level, name: 'Levels', bold: true,
+      onClick: () => { if (lOpen) expanded.delete('__lvl__'); else expanded.add('__lvl__'); saveExpanded(); renderTree(); },
+      menu: () => [
+        { label: 'New level', icon: 'level', action: () => { expanded.add('__lvl__'); saveExpanded(); lState.creating = true; goLevel(null); } },
+        { label: 'All levels', icon: 'level', action: () => goLevel(null) }
+      ]
+    }));
+    if (lOpen) {
+      if (!levels.length) list.appendChild(row({ icon: I.plus, name: 'New level', indent: 27, onClick: () => { lState.creating = true; goLevel(null); } }));
+      levels.slice().sort((a, b) => (a.order || 0) - (b.order || 0)).forEach(lv => {
+        const d = levelData(lv);
+        list.appendChild(row({
+          icon: iconSVG(lv.icon || 'star', 14), name: lv.name, indent: 27, meta: 'Lv ' + d.level,
+          active: currentPage === 'levels' && lState.id === lv.id,
+          onClick: () => goLevel(lv.id),
+          menu: () => [{ label: 'Delete level', icon: 'trash', danger: true, action: () => deleteLevel(lv) }]
+        }));
+      });
+    }
     const tOpen = expanded.has('__terr__');
     list.appendChild(row({
       icon: I.territory, name: 'Territory progress', bold: true,
@@ -639,7 +980,7 @@
   };
 
   window.renderExtraBreadcrumbs = function (bc) {
-    if (currentPage !== 'territory' && currentPage !== 'achievements' && currentPage !== 'notes') return false;
+    if (!['territory', 'achievements', 'notes', 'levels'].includes(currentPage)) return false;
     bc.innerHTML = '';
     const crumb = (text, current, onClick) => {
       const c = el('span', 'crumb' + (current ? ' current' : '')); c.textContent = text;
@@ -647,6 +988,12 @@
       bc.appendChild(c);
     };
     const sep = () => { const s = el('span', 'crumb-sep'); s.textContent = '/'; bc.appendChild(s); };
+    if (currentPage === 'levels') {
+      const lv = levels.find(x => x.id === lState.id);
+      crumb('Levels', !lv, () => goLevel(null));
+      if (lv) { sep(); crumb(lv.name, true); }
+      return true;
+    }
     if (currentPage === 'notes') {
       const n = notes.find(x => x.id === nState.noteId);
       crumb('Notes', !n);
@@ -668,6 +1015,8 @@
     pageT.style.display = currentPage === 'territory' ? 'block' : 'none';
     pageA.style.display = currentPage === 'achievements' ? 'block' : 'none';
     pageN.style.display = currentPage === 'notes' ? 'block' : 'none';
+    pageL.style.display = currentPage === 'levels' ? 'block' : 'none';
+    if (currentPage === 'levels') { const ae = document.activeElement; if (!(ae && pageL.contains(ae) && (ae.tagName === 'INPUT' || ae.tagName === 'SELECT'))) renderLevels(); }
     if (currentPage !== 'notes') pageN.dataset.noteId = '';
     if (currentPage === 'notes') renderNote();
     else if (currentPage === 'territory') renderTerritory();
@@ -1026,12 +1375,16 @@
       else fresh.forEach(r => toastQueue.push(r));
     }
     try { localStorage.setItem(SEEN_KEY, JSON.stringify(counts)); } catch (e) {}
+    try { checkLevelUps(); } catch (e) {}
     showNextToast();
   }
   function showNextToast() {
     if (toastBusy || !toastQueue.length) return;
     const r = toastQueue.shift(); toastBusy = true;
-    if (r.many) {
+    if (r.html) {
+      toast.innerHTML = r.html;
+      toast.onclick = () => { toast.classList.remove('show'); r.open(); };
+    } else if (r.many) {
       toast.innerHTML = trophySVG(r.art, 40) + '<div><small>Achievements unlocked</small><b>' + r.many + ' new trophies on your shelf</b></div>';
       toast.onclick = () => { toast.classList.remove('show'); goAch('mine'); };
     } else {
@@ -1366,7 +1719,7 @@
   }
   applyTheme((() => { try { return localStorage.getItem('tgr_theme'); } catch (e) { return null; } })());
 
-  const APP_VERSION = '7';
+  const APP_VERSION = '8';
   async function checkForUpdates(btn, msg) {
     btn.disabled = true; btn.textContent = 'Checking...';
     try {
@@ -1417,5 +1770,6 @@
   const hb = document.querySelector('#sidebar-header .header-btns');
   if (hb) hb.insertBefore(gear, hb.firstChild);
 
+  window.__tgr = { goLevel, goTerritory, goAch, goNote };
   renderAll();
 })();
