@@ -325,6 +325,23 @@
   .prof-lv { display: flex; gap: 12px; align-items: center; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; }
   :root[data-theme="skyrim"] .prof-info h1, :root[data-theme="skyrim"] .prof-meta b { font-family: 'Cinzel', Georgia, serif; letter-spacing: .05em; }
   @media (max-width: 520px) { .prof-top { flex-direction: column; text-align: center; } .prof-stats { justify-content: center; } }
+
+  :root[data-theme="wayne"] {
+    --bg: #0b0c0f; --bg-elevated: #15171c; --sidebar-bg: #050608; --sidebar-text: #d9dbe0; --sidebar-text-dim: #6f747e;
+    --sidebar-active: #1c1f26; --sidebar-hover: #111318; --text: #e9eaee; --text-dim: #8b909a; --accent: #e3b341; --accent-soft: #2a2410;
+    --border: #262a32; --danger: #e5484d; --popover-bg: #16181d; color-scheme: dark;
+  }
+  :root[data-theme="wayne"] body { background:
+    radial-gradient(900px 420px at 80% -10%, rgba(227,179,65,.07) 0%, transparent 60%),
+    linear-gradient(180deg, #0e1014 0%, #0b0c0f 40%, #08090b 100%); }
+  :root[data-theme="wayne"] #sidebar { box-shadow: inset -1px 0 0 #1c1f26; background: linear-gradient(180deg, #07080a, #030304); }
+  :root[data-theme="wayne"] .x-title, :root[data-theme="wayne"] .pl-title, :root[data-theme="wayne"] .prof-info h1,
+  :root[data-theme="wayne"] .crumb.current, :root[data-theme="wayne"] #sidebar-title { letter-spacing: .06em; text-transform: uppercase; }
+  :root[data-theme="wayne"] #add-btn, :root[data-theme="wayne"] #weight-add-btn, :root[data-theme="wayne"] .x-btn.primary,
+  :root[data-theme="wayne"] .tab-btn.active, :root[data-theme="wayne"] .pl-add, :root[data-theme="wayne"] .sync-actions button.primary,
+  :root[data-theme="wayne"] .prof-cam, :root[data-theme="wayne"] button[style*="var(--accent)"] { color: #0b0c0f !important; }
+  :root[data-theme="wayne"] .pl-card, :root[data-theme="wayne"] .lv-hero, :root[data-theme="wayne"] .prof-top, :root[data-theme="wayne"] .t-card {
+    background: linear-gradient(160deg, #1a1d23, #121418); box-shadow: inset 0 1px 0 rgba(255,255,255,.04); }
   @media (max-width: 520px) { .t-stats { grid-template-columns: repeat(2, 1fr); } .t-grid { gap: 4px; } }
   `;
   const styleEl = document.createElement('style');
@@ -451,6 +468,7 @@
     folder: () => I.folder, note: () => I.note, trash: () => I.trash,
     icon: () => '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M8 1.8L9.8 5.7L14 6.1L10.8 8.9L11.8 13L8 10.8L4.2 13L5.2 8.9L2 6.1L6.2 5.7Z"/></svg>',
     board: () => I.territory,
+    edit: () => '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M3 13L3.6 10.4L11 3L13 5L5.6 12.4Z"/><path d="M9.5 4.5L11.5 6.5"/></svg>',
     level: () => I.level
   };
   function openCtxMenu(x, y, items) {
@@ -470,7 +488,7 @@
   const sidebarEl = document.getElementById('sidebar');
   if (sidebarEl) sidebarEl.addEventListener('contextmenu', e => { if (!e.target.closest('input, textarea')) e.preventDefault(); });
   function attachRowMenu(rowEl, getItems) {
-    const items = () => (typeof getItems === 'function' ? getItems() : getItems);
+    const items = () => (typeof getItems === 'function' ? getItems(rowEl) : getItems);
     if (isTouch) rowEl.draggable = false;
     const more = el('button', 'row-more', '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="3.5" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="12.5" cy="8" r="1.4"/></svg>');
     more.title = 'Actions'; more.setAttribute('aria-label', 'Actions');
@@ -550,7 +568,8 @@
       list.appendChild(row({
         icon: I.folder, name: f.name, indent, chevron: hasKids ? open : null,
         onClick: () => { if (open) expanded.delete(key); else expanded.add(key); saveExpanded(); renderTree(); },
-        menu: () => notesMenuItems(f.id).concat([{ label: 'Delete folder', icon: 'trash', danger: true, action: () => deleteNoteFolder(f) }])
+        menu: rowEl => [{ label: 'Rename', icon: 'edit', action: () => inlineEdit(rowEl.querySelector('.row-name'), f.name, v => nFoldersCol.doc(f.id).update({ name: v })) }]
+          .concat(notesMenuItems(f.id), [{ label: 'Delete folder', icon: 'trash', danger: true, action: () => deleteNoteFolder(f) }])
       }));
       if (open) renderNotesTree(list, f.id, depth + 1);
     });
@@ -635,8 +654,7 @@
   levelsCol.orderBy('createdAt', 'asc').onSnapshot(s => { levels = s.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); });
 
   const SRC = {
-    folder: { label: 'ToDo folder', unit: 'per task', def: 10, pick: 'folder',
-      hint: 'Priority multiplies XP: Highest ×2, High ×1.5, Low ×0.75, Lowest ×0.5. +5 XP if done before the deadline. Subfolders count too.' },
+    folder: { label: 'ToDo folder', unit: 'per task', def: 10, pick: 'folder', hint: 'Every finished task gives this XP, tasks with a deadline give 1.5× (15 instead of 10). Subfolders count too.' },
     board: { label: 'Territory board', unit: 'per square', def: 20, pick: 'board', hint: '+100 XP for every 10 in a row, +300 XP when the board is full.' },
     gymRecords: { label: 'Gym records', unit: 'per record', def: 40, hint: 'Every time you beat your best in Gym → Progress.' }
   };
@@ -666,8 +684,7 @@
     if (src.type === 'folder') {
       const ids = new Set(folderTree(src.id));
       allTasks.filter(t => t.done && t.completedAt && ids.has(t.folderId || null)).forEach(t => {
-        const onTime = t.deadline && tsDay(t.completedAt) <= t.deadline ? 5 : 0;
-        ev.push({ day: tsDay(t.completedAt), ts: t.completedAt, xp: Math.round(xp * (PRIO_MULT[t.priority || 0] || 1)) + onTime, label: t.text });
+        ev.push({ day: tsDay(t.completedAt), ts: t.completedAt, xp: t.deadline ? Math.round(xp * 1.5) : xp, label: t.text + (t.deadline ? ' (deadline)' : '') });
       });
     } else if (src.type === 'board') {
       const b = boards.find(x => x.id === src.id); if (!b) return ev;
@@ -1047,7 +1064,8 @@
           icon: iconSVG(lv.icon || 'star', 14), name: lv.name, indent: 27, meta: 'Lv ' + d.level,
           active: currentPage === 'levels' && lState.id === lv.id,
           onClick: () => goLevel(lv.id),
-          menu: () => [{ label: 'Delete level', icon: 'trash', danger: true, action: () => deleteLevel(lv) }]
+          menu: rowEl => [{ label: 'Rename', icon: 'edit', action: () => inlineEdit(rowEl.querySelector('.row-name'), lv.name, v => levelsCol.doc(lv.id).update({ name: v })) },
+            { label: 'Delete level', icon: 'trash', danger: true, action: () => deleteLevel(lv) }]
         }));
       });
     }
@@ -1067,7 +1085,8 @@
           icon: iconSVG(b.icon || 'target', 14), name: b.name, indent: 27, meta: cellsOf(b.id).length,
           active: currentPage === 'territory' && tState.boardId === b.id,
           onClick: () => goTerritory(b.id),
-          menu: () => [{ label: 'Delete board', icon: 'trash', danger: true, action: () => deleteBoard(b) }]
+          menu: rowEl => [{ label: 'Rename', icon: 'edit', action: () => inlineEdit(rowEl.querySelector('.row-name'), b.name, v => boardsCol.doc(b.id).update({ name: v })) },
+            { label: 'Delete board', icon: 'trash', danger: true, action: () => deleteBoard(b) }]
         }));
       });
     }
@@ -1812,7 +1831,8 @@
     { id: 'light', name: 'Light', c: ['#f6f5f2', '#ffffff', '#1c1e22', '#1d40c4'] },
     { id: 'dark', name: 'Dark', c: ['#121317', '#191b20', '#0e0f12', '#3f5fd6'] },
     { id: 'blood', name: 'Blood', c: ['#140708', '#1e0b0d', '#0c0405', '#c8102e'] },
-    { id: 'skyrim', name: 'Skyrim', c: ['#16140f', '#201d17', '#0e0d0a', '#b8975a'] }
+    { id: 'skyrim', name: 'Skyrim', c: ['#16140f', '#201d17', '#0e0d0a', '#b8975a'] },
+    { id: 'wayne', name: 'Bruce Wayne', c: ['#0b0c0f', '#15171c', '#050608', '#e3b341'] }
   ];
   function applyTheme(id) {
     if (id) document.documentElement.setAttribute('data-theme', id); else document.documentElement.removeAttribute('data-theme');
@@ -1827,7 +1847,7 @@
   }
   applyTheme((() => { try { return localStorage.getItem('tgr_theme'); } catch (e) { return null; } })());
 
-  const APP_VERSION = '11';
+  const APP_VERSION = '13';
   async function checkForUpdates(btn, msg) {
     btn.disabled = true; btn.textContent = 'Checking...';
     try {
