@@ -327,21 +327,28 @@
   @media (max-width: 520px) { .prof-top { flex-direction: column; text-align: center; } .prof-stats { justify-content: center; } }
 
   :root[data-theme="wayne"] {
-    --bg: #0b0c0f; --bg-elevated: #15171c; --sidebar-bg: #050608; --sidebar-text: #d9dbe0; --sidebar-text-dim: #6f747e;
-    --sidebar-active: #1c1f26; --sidebar-hover: #111318; --text: #e9eaee; --text-dim: #8b909a; --accent: #e3b341; --accent-soft: #2a2410;
-    --border: #262a32; --danger: #e5484d; --popover-bg: #16181d; color-scheme: dark;
+    --bg: #0a0b0d; --bg-elevated: #131518; --sidebar-bg: #050607; --sidebar-text: #d6d9de; --sidebar-text-dim: #6a7079;
+    --sidebar-active: #1a1d22; --sidebar-hover: #0f1114; --text: #e4e7eb; --text-dim: #868c95; --accent: #9fb0c3; --accent-soft: #1b2129;
+    --border: #22262c; --danger: #d9534f; --popover-bg: #15171b; color-scheme: dark;
   }
-  :root[data-theme="wayne"] body { background:
-    radial-gradient(900px 420px at 80% -10%, rgba(227,179,65,.07) 0%, transparent 60%),
-    linear-gradient(180deg, #0e1014 0%, #0b0c0f 40%, #08090b 100%); }
-  :root[data-theme="wayne"] #sidebar { box-shadow: inset -1px 0 0 #1c1f26; background: linear-gradient(180deg, #07080a, #030304); }
+  :root[data-theme="wayne"] #main { background: radial-gradient(1000px 500px at 50% -15%, #1a1e24 0%, transparent 60%), linear-gradient(180deg, #0c0d10, #070809); }
+  :root[data-theme="wayne"] #sidebar { box-shadow: inset -1px 0 0 #1a1d22; }
   :root[data-theme="wayne"] .x-title, :root[data-theme="wayne"] .pl-title, :root[data-theme="wayne"] .prof-info h1,
   :root[data-theme="wayne"] .crumb.current, :root[data-theme="wayne"] #sidebar-title { letter-spacing: .06em; text-transform: uppercase; }
   :root[data-theme="wayne"] #add-btn, :root[data-theme="wayne"] #weight-add-btn, :root[data-theme="wayne"] .x-btn.primary,
   :root[data-theme="wayne"] .tab-btn.active, :root[data-theme="wayne"] .pl-add, :root[data-theme="wayne"] .sync-actions button.primary,
-  :root[data-theme="wayne"] .prof-cam, :root[data-theme="wayne"] button[style*="var(--accent)"] { color: #0b0c0f !important; }
-  :root[data-theme="wayne"] .pl-card, :root[data-theme="wayne"] .lv-hero, :root[data-theme="wayne"] .prof-top, :root[data-theme="wayne"] .t-card {
-    background: linear-gradient(160deg, #1a1d23, #121418); box-shadow: inset 0 1px 0 rgba(255,255,255,.04); }
+  :root[data-theme="wayne"] .prof-cam, :root[data-theme="wayne"] button[style*="var(--accent)"] { color: #0a0b0d !important; }
+  :root[data-theme="wayne"] .pl-card, :root[data-theme="wayne"] .lv-hero, :root[data-theme="wayne"] .prof-top, :root[data-theme="wayne"] .t-card,
+  :root[data-theme="wayne"] .task { background: linear-gradient(160deg, #16191d, #101215); box-shadow: inset 0 1px 0 rgba(255,255,255,.035); }
+
+  /* background image setting */
+  body.has-bgimg #main { background: var(--bg); }
+  #bg-layer { opacity: var(--bg-img-op, .16); }
+  body.has-bgimg #bg-layer::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 40%, var(--bg) 100%); }
+  body.has-bgimg .task, body.has-bgimg .pl-card, body.has-bgimg .lv-hero, body.has-bgimg .prof-top, body.has-bgimg #weight-chart-wrap {
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .bg-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .bg-row input[type=range] { flex: 1; min-width: 120px; accent-color: var(--accent); }
   @media (max-width: 520px) { .t-stats { grid-template-columns: repeat(2, 1fr); } .t-grid { gap: 4px; } }
   `;
   const styleEl = document.createElement('style');
@@ -1832,7 +1839,7 @@
     { id: 'dark', name: 'Dark', c: ['#121317', '#191b20', '#0e0f12', '#3f5fd6'] },
     { id: 'blood', name: 'Blood', c: ['#140708', '#1e0b0d', '#0c0405', '#c8102e'] },
     { id: 'skyrim', name: 'Skyrim', c: ['#16140f', '#201d17', '#0e0d0a', '#b8975a'] },
-    { id: 'wayne', name: 'Bruce Wayne', c: ['#0b0c0f', '#15171c', '#050608', '#e3b341'] }
+    { id: 'wayne', name: 'Bruce Wayne', c: ['#0a0b0d', '#16191d', '#050607', '#9fb0c3'] }
   ];
   function applyTheme(id) {
     if (id) document.documentElement.setAttribute('data-theme', id); else document.documentElement.removeAttribute('data-theme');
@@ -1847,7 +1854,7 @@
   }
   applyTheme((() => { try { return localStorage.getItem('tgr_theme'); } catch (e) { return null; } })());
 
-  const APP_VERSION = '13';
+  const APP_VERSION = '14';
   async function checkForUpdates(btn, msg) {
     btn.disabled = true; btn.textContent = 'Checking...';
     try {
@@ -1866,6 +1873,30 @@
     btn.textContent = 'Reloading...';
     location.reload();
   }
+  const BG_KEY = 'tgr_bg_img', BG_OP_KEY = 'tgr_bg_op';
+  function applyBg() {
+    let img = null, op = 0.16;
+    try { img = localStorage.getItem(BG_KEY); op = parseFloat(localStorage.getItem(BG_OP_KEY) || '0.16'); } catch (e) {}
+    const layer = document.getElementById('bg-layer');
+    if (!layer) return;
+    document.body.classList.toggle('has-bgimg', !!img);
+    layer.style.backgroundImage = img ? 'url("' + img + '")' : '';
+    document.documentElement.style.setProperty('--bg-img-op', String(op));
+  }
+  applyBg();
+  const bgInput = el('input'); bgInput.type = 'file'; bgInput.accept = 'image/*'; bgInput.style.display = 'none'; document.body.appendChild(bgInput);
+  bgInput.addEventListener('change', () => {
+    const f = bgInput.files && bgInput.files[0]; bgInput.value = ''; if (!f) return;
+    const url = URL.createObjectURL(f), img = new Image();
+    img.onload = () => {
+      const maxW = 1600, k = Math.min(1, maxW / img.width);
+      const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+      try { localStorage.setItem(BG_KEY, c.toDataURL('image/jpeg', 0.78)); } catch (e) { alert('This image is too big, try a smaller one.'); }
+      applyBg(); openSettings();
+    };
+    img.src = url;
+  });
   const setModal = el('div'); setModal.id = 'set-modal'; document.body.appendChild(setModal);
   setModal.addEventListener('click', e => { if (e.target === setModal) setModal.classList.remove('open'); });
   function openSettings() {
@@ -1873,6 +1904,9 @@
     setModal.innerHTML = `<div class="a-m-card" role="dialog" aria-label="Settings"><p class="a-m-name">Settings</p>
       <p class="a-m-sub" style="margin:0">Theme</p><div class="th-grid"></div>
       <button class="th-system${cur ? '' : ' on'}">Match my device (light or dark)</button>
+      <p class="a-m-sub" style="margin:4px 0 0">Background picture (this device)</p>
+      <div class="bg-row"><button class="x-btn" id="set-bg">${document.body.classList.contains('has-bgimg') ? 'Change picture' : 'Choose picture'}</button>
+        ${document.body.classList.contains('has-bgimg') ? '<button class="x-btn ghost-danger" id="set-bg-rm">Remove</button><input type="range" id="set-bg-op" min="0.05" max="0.5" step="0.01" aria-label="Picture visibility">' : ''}</div>
       <p class="a-m-sub" style="margin:4px 0 0">Sync</p>
       <button class="x-btn" id="set-sync" style="text-align:left">Sync with GitHub</button>
       <p class="a-m-sub" style="margin:4px 0 0">App</p>
@@ -1888,6 +1922,14 @@
     });
     setModal.querySelector('.th-system').addEventListener('click', () => { applyTheme(null); openSettings(); });
     setModal.querySelector('#set-sync').addEventListener('click', () => { setModal.classList.remove('open'); document.getElementById('sync-btn').click(); });
+    setModal.querySelector('#set-bg').addEventListener('click', () => bgInput.click());
+    const bgRm = setModal.querySelector('#set-bg-rm');
+    if (bgRm) bgRm.addEventListener('click', () => { try { localStorage.removeItem(BG_KEY); } catch (e) {} applyBg(); openSettings(); });
+    const bgOp = setModal.querySelector('#set-bg-op');
+    if (bgOp) {
+      try { bgOp.value = localStorage.getItem(BG_OP_KEY) || '0.16'; } catch (e) {}
+      bgOp.addEventListener('input', () => { try { localStorage.setItem(BG_OP_KEY, bgOp.value); } catch (e) {} applyBg(); });
+    }
     setModal.querySelector('#set-close').addEventListener('click', () => setModal.classList.remove('open'));
     setModal.querySelector('#set-update').addEventListener('click', e => checkForUpdates(e.currentTarget, setModal.querySelector('#set-update-msg')));
     setModal.classList.add('open');
