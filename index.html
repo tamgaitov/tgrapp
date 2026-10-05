@@ -1986,6 +1986,7 @@
       tasksCol.doc(t.id).update(patch).catch(() => {});
     }
   }
+  window.PAGE_VERSION = '15';
   function inlineEdit(target, value, onSave) {
     if (!target || target.querySelector('.inline-edit')) return;
     const prevHTML = target.innerHTML;

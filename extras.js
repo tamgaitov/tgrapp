@@ -658,11 +658,20 @@
   const levelsCol = SyncDB.collection('levels');
   let levels = [];
   let lState = { id: null, creating: false, adding: false };
-  levelsCol.orderBy('createdAt', 'asc').onSnapshot(s => { levels = s.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); });
+  levelsCol.orderBy('createdAt', 'asc').onSnapshot(s => {
+    levels = s.docs.map(d => ({ id: d.id, ...d.data() }));
+    levels.forEach(lv => {
+      if (!lv.balance2 && (lv.sources || []).length) {
+        const sources = lv.sources.map(x => x.type === 'board' && +x.xp === 20 ? { ...x, xp: 35 } : x);
+        levelsCol.doc(lv.id).update({ sources, balance2: true });
+      }
+    });
+    renderAll();
+  });
 
   const SRC = {
-    folder: { label: 'ToDo folder', unit: 'per task', def: 10, pick: 'folder', hint: 'Every finished task gives this XP, tasks with a deadline give 1.5× (15 instead of 10). Subfolders count too.' },
-    board: { label: 'Territory board', unit: 'per square', def: 20, pick: 'board', hint: '+100 XP for every 10 in a row, +300 XP when the board is full.' },
+    folder: { label: 'ToDo folder', unit: 'per task', def: 10, pick: 'folder', hint: 'This is for Medium or no difficulty. Easy gives half, Hard gives double, a deadline adds +5. Subfolders count too.' },
+    board: { label: 'Territory board', unit: 'per square', def: 35, pick: 'board', hint: '+100 XP for every 10 in a row, +300 XP when the board is full.' },
     gymRecords: { label: 'Gym records', unit: 'per record', def: 40, hint: 'Every time you beat your best in Gym → Progress.' }
   };
   const PRIO_MULT = { 2: 2, 1: 1.5, 0: 1, '-1': 0.75, '-2': 0.5 };
@@ -691,7 +700,9 @@
     if (src.type === 'folder') {
       const ids = new Set(folderTree(src.id));
       allTasks.filter(t => t.done && t.completedAt && ids.has(t.folderId || null)).forEach(t => {
-        ev.push({ day: tsDay(t.completedAt), ts: t.completedAt, xp: t.deadline ? Math.round(xp * 1.5) : xp, label: t.text + (t.deadline ? ' (deadline)' : '') });
+        const mult = t.difficulty === 'easy' ? 0.5 : t.difficulty === 'hard' ? 2 : 1;
+        const tag = [t.difficulty ? t.difficulty : '', t.deadline ? 'deadline' : ''].filter(Boolean).join(', ');
+        ev.push({ day: tsDay(t.completedAt), ts: t.completedAt, xp: Math.round(xp * mult) + (t.deadline ? 5 : 0), label: t.text + (tag ? ' (' + tag + ')' : '') });
       });
     } else if (src.type === 'board') {
       const b = boards.find(x => x.id === src.id); if (!b) return ev;
@@ -1854,7 +1865,7 @@
   }
   applyTheme((() => { try { return localStorage.getItem('tgr_theme'); } catch (e) { return null; } })());
 
-  const APP_VERSION = '14';
+  const APP_VERSION = '15';
   async function checkForUpdates(btn, msg) {
     btn.disabled = true; btn.textContent = 'Checking...';
     try {
@@ -1911,7 +1922,7 @@
       <button class="x-btn" id="set-sync" style="text-align:left">Sync with GitHub</button>
       <p class="a-m-sub" style="margin:4px 0 0">App</p>
       <button class="x-btn" id="set-update" style="text-align:left">Check for updates</button>
-      <span class="t-hint" id="set-update-msg">Version ${APP_VERSION}</span>
+      <span class="t-hint" id="set-update-msg">Version ${APP_VERSION} · page ${window.PAGE_VERSION || 'old'}</span>
       <button class="x-btn" id="set-close">Close</button></div>`;
     const grid = setModal.querySelector('.th-grid');
     THEMES.forEach(t => {
