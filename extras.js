@@ -349,6 +349,53 @@
     backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
   .bg-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .bg-row input[type=range] { flex: 1; min-width: 120px; accent-color: var(--accent); }
+
+  /* finance + excel viewer */
+  #page-finance { max-width: 720px; }
+  #page-xls { max-width: 1100px; }
+  .xv-title { overflow-wrap: anywhere; font-size: 20px; }
+  .fin-folders { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; margin-bottom: 14px; }
+  .fin-folder { display: flex; align-items: center; gap: 8px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px; color: var(--text); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; text-align: left; }
+  .fin-folder span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fin-folder small { color: var(--text-dim); font-weight: 500; }
+  .fin-folder:hover, .fin-file:hover { border-color: var(--accent); }
+  .fin-files { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  .fin-file { display: flex; align-items: center; gap: 12px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px;
+    padding: 10px 12px; color: var(--text); font-family: inherit; cursor: pointer; text-align: left; }
+  .fin-ic { width: 34px; height: 34px; border-radius: 9px; background: rgba(51,194,122,.14); color: #33c27a; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .fin-n { display: flex; flex-direction: column; min-width: 0; }
+  .fin-n b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fin-n small { font-size: 12px; color: var(--text-dim); }
+  .fin-drop { border: 1.5px dashed var(--border); border-radius: 14px; padding: 26px 16px; display: flex; flex-direction: column; align-items: center;
+    gap: 6px; color: var(--text-dim); cursor: pointer; text-align: center; }
+  .fin-drop b { color: var(--text); font-size: 14px; }
+  .fin-drop span { font-size: 12px; }
+  .fin-drop:hover, .fin-drop.drop-hover { border-color: var(--accent); background: var(--accent-soft); }
+  .tree-row.drop-hover, .fin-folder.drop-hover { background: var(--accent-soft) !important; box-shadow: inset 0 0 0 1.5px var(--accent); }
+  #drop-ov { position: absolute; inset: 10px; z-index: 50; border: 2px dashed var(--accent); border-radius: 16px; background: color-mix(in srgb, var(--bg) 82%, transparent);
+    display: none; align-items: center; justify-content: center; pointer-events: none; }
+  #drop-ov.show { display: flex; }
+  #drop-ov div { display: flex; align-items: center; gap: 10px; color: var(--text); font-size: 16px; }
+  .xv-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+  .xv-tabs { display: flex; gap: 5px; flex-wrap: wrap; flex: 1; min-width: 0; }
+  .xv-tab { background: var(--bg-elevated); border: 1px solid var(--border); color: var(--text-dim); border-radius: 8px; padding: 6px 11px; font-size: 13px;
+    font-weight: 600; cursor: pointer; font-family: inherit; }
+  .xv-tab.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .xv-search { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 9px; padding: 8px 11px; color: var(--text); font-size: 14px;
+    font-family: inherit; outline: none; min-width: 180px; margin-left: auto; }
+  .xv-search:focus { border-color: var(--accent); }
+  .xv-info { margin-bottom: 8px; }
+  .xv-wrap { overflow: auto; max-height: calc(100vh - 230px); max-height: calc(100dvh - 230px); border: 1px solid var(--border); border-radius: 10px; background: var(--bg-elevated); }
+  table.xv { border-collapse: separate; border-spacing: 0; font-size: 13px; font-variant-numeric: tabular-nums; }
+  table.xv th, table.xv td { padding: 5px 9px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); white-space: nowrap;
+    max-width: 340px; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+  table.xv thead th { position: sticky; top: 0; z-index: 2; background: var(--bg); color: var(--text-dim); font-weight: 600; font-size: 11.5px; text-align: center; }
+  table.xv .xv-rn { position: sticky; left: 0; z-index: 1; background: var(--bg); color: var(--text-dim); font-size: 11.5px; text-align: right; min-width: 34px; }
+  table.xv thead .xv-rn { z-index: 3; }
+  table.xv td.n { text-align: right; }
+  table.xv tbody tr:hover td { background: var(--accent-soft); }
+  table.xv tbody tr:hover td.xv-rn { background: var(--bg); }
   @media (max-width: 520px) { .t-stats { grid-template-columns: repeat(2, 1fr); } .t-grid { gap: 4px; } }
   `;
   const styleEl = document.createElement('style');
@@ -476,7 +523,9 @@
     icon: () => '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M8 1.8L9.8 5.7L14 6.1L10.8 8.9L11.8 13L8 10.8L4.2 13L5.2 8.9L2 6.1L6.2 5.7Z"/></svg>',
     board: () => I.territory,
     edit: () => '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M3 13L3.6 10.4L11 3L13 5L5.6 12.4Z"/><path d="M9.5 4.5L11.5 6.5"/></svg>',
-    level: () => I.level
+    level: () => I.level,
+    sheet: () => I.sheet,
+    down: () => '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.5V10.5M4.5 7L8 10.5L11.5 7M3 13.5H13"/></svg>'
   };
   function openCtxMenu(x, y, items) {
     ctxMenu.innerHTML = ''; ctxMenu.dataset.owner = '';
@@ -524,6 +573,7 @@
   function notesMenuItems(folderId) {
     return [
       { label: 'New note', icon: 'note', action: () => newNote(folderId) },
+      { label: 'Add Excel file', icon: 'sheet', action: () => pickFiles('notes', folderId) },
       { label: 'New folder', icon: 'folder', action: () => {
         openSection('__notes__'); if (folderId) expanded.add('nf:' + folderId); saveExpanded();
         nState.creatingIn = folderId || null; renderTree();
@@ -571,13 +621,15 @@
     const indent = 6 + depth * 15;
     nChildren(parentId).forEach(f => {
       const key = 'nf:' + f.id, open = expanded.has(key);
-      const hasKids = nChildren(f.id).length || nNotesIn(f.id).length;
-      list.appendChild(row({
+      const hasKids = nChildren(f.id).length || nNotesIn(f.id).length || filesIn('notes', f.id).length;
+      const nfRow = (row({
         icon: I.folder, name: f.name, indent, chevron: hasKids ? open : null,
         onClick: () => { if (open) expanded.delete(key); else expanded.add(key); saveExpanded(); renderTree(); },
         menu: rowEl => [{ label: 'Rename', icon: 'edit', action: () => inlineEdit(rowEl.querySelector('.row-name'), f.name, v => nFoldersCol.doc(f.id).update({ name: v })) }]
           .concat(notesMenuItems(f.id), [{ label: 'Delete folder', icon: 'trash', danger: true, action: () => deleteNoteFolder(f) }])
       }));
+      dropTarget(nfRow, () => ({ scope: 'notes', folderId: f.id }));
+      list.appendChild(nfRow);
       if (open) renderNotesTree(list, f.id, depth + 1);
     });
     nNotesIn(parentId).forEach(n => {
@@ -587,6 +639,7 @@
         onClick: () => goNote(n.id), menu: () => [{ label: 'Delete note', icon: 'trash', danger: true, action: () => deleteNote(n) }]
       }));
     });
+    fileRows(list, 'notes', parentId, indent + 14);
     if (nState.creatingIn !== undefined && (nState.creatingIn || null) === (parentId || null)) list.appendChild(folderForm(parentId, indent + 14));
   }
   function goNote(id) { currentPage = 'notes'; nState.noteId = id; renderAll(); autoCollapseOnMobile(); }
@@ -1006,6 +1059,361 @@
     }
   };
 
+  // ================= files (Excel viewer) + Finance =================
+  const filesCol = SyncDB.collection('files');
+  const finFoldersCol = SyncDB.collection('finFolders');
+  let files = [], finFolders = [];
+  const finState = { folderId: null, creatingIn: undefined };
+  const xState = { fileId: null, sheet: 0, query: '' };
+  filesCol.orderBy('createdAt', 'asc').onSnapshot(s => { files = s.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); pumpUploads(); });
+  finFoldersCol.orderBy('createdAt', 'asc').onSnapshot(s => { finFolders = s.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); });
+  const FILE_EXT = ['.xlsx', '.xlsm', '.xls', '.csv', '.ods'];
+  const MAX_FILE = 25 * 1024 * 1024;
+  const extOf = name => { const m = /\.[^.]+$/.exec(name || ''); return m ? m[0].toLowerCase() : ''; };
+  const filePath = f => 'files/' + f.id + (f.ext || '.xlsx');
+  const fmtSize = b => b < 1024 ? b + ' B' : b < 1048576 ? Math.round(b / 1024) + ' KB' : (b / 1048576).toFixed(1) + ' MB';
+
+  // --- local copy of each file (IndexedDB), so files open offline ---
+  let idbP = null;
+  function idb() {
+    if (!idbP) idbP = new Promise((res, rej) => {
+      const r = indexedDB.open('tgr_files', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('blobs');
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    });
+    return idbP;
+  }
+  async function idbOp(mode, fn) {
+    const db = await idb();
+    return new Promise((res, rej) => { const tx = db.transaction('blobs', mode); const rq = fn(tx.objectStore('blobs')); tx.oncomplete = () => res(rq && rq.result); tx.onerror = () => rej(tx.error); });
+  }
+  const idbGet = id => idbOp('readonly', s => s.get(id)).catch(() => null);
+  const idbPut = (id, buf) => idbOp('readwrite', s => s.put(buf, id));
+  const idbDel = id => idbOp('readwrite', s => s.delete(id)).catch(() => {});
+
+  // --- GitHub file storage (files/ folder of the private data repo) ---
+  function ghCfg() { try { return SyncDB.getConfig(); } catch (e) { return null; } }
+  function ghUrl(cfg, path) { return 'https://api.github.com/repos/' + cfg.owner + '/' + cfg.repo + '/contents/' + path.split('/').map(encodeURIComponent).join('/'); }
+  const ghH = (cfg, accept) => ({ Accept: accept || 'application/vnd.github+json', Authorization: 'Bearer ' + cfg.token, 'X-GitHub-Api-Version': '2022-11-28' });
+  function toB64(buf) {
+    const bytes = new Uint8Array(buf); let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(bin);
+  }
+  async function ghSha(cfg, path) {
+    const r = await fetch(ghUrl(cfg, path) + '?t=' + Date.now(), { headers: ghH(cfg), cache: 'no-store' });
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error('GitHub error ' + r.status);
+    return (await r.json()).sha;
+  }
+  async function ghPut(cfg, path, buf) {
+    const body = { message: 'file ' + path, content: toB64(buf) };
+    let r = await fetch(ghUrl(cfg, path), { method: 'PUT', headers: { ...ghH(cfg), 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (r.status === 422 || r.status === 409) { body.sha = await ghSha(cfg, path); r = await fetch(ghUrl(cfg, path), { method: 'PUT', headers: { ...ghH(cfg), 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); }
+    if (!r.ok) throw new Error('Upload failed (' + r.status + ')');
+  }
+  async function ghGet(cfg, path) {
+    const r = await fetch(ghUrl(cfg, path) + '?t=' + Date.now(), { headers: ghH(cfg, 'application/vnd.github.raw'), cache: 'no-store' });
+    if (!r.ok) throw new Error(r.status === 404 ? 'File is not on GitHub yet. Open it on the device you added it from while online.' : 'Download failed (' + r.status + ')');
+    return r.arrayBuffer();
+  }
+  async function ghDel(cfg, path) {
+    const sha = await ghSha(cfg, path); if (!sha) return;
+    const r = await fetch(ghUrl(cfg, path), { method: 'DELETE', headers: { ...ghH(cfg), 'Content-Type': 'application/json' }, body: JSON.stringify({ message: 'delete ' + path, sha }) });
+    if (!r.ok && r.status !== 404) throw new Error('Delete failed');
+  }
+
+  // uploads that are waiting for internet, and deletions that are waiting too
+  const uploading = new Set();
+  const DELQ = 'tgr_file_delq';
+  const getDelQ = () => { try { return JSON.parse(localStorage.getItem(DELQ) || '[]'); } catch (e) { return []; } };
+  const setDelQ = q => { try { localStorage.setItem(DELQ, JSON.stringify(q)); } catch (e) {} };
+  async function pumpUploads() {
+    const cfg = ghCfg(); if (!cfg || !navigator.onLine) return;
+    for (const f of files.filter(x => !x.uploaded && !uploading.has(x.id))) {
+      const buf = await idbGet(f.id); if (!buf) continue;
+      uploading.add(f.id);
+      try { await ghPut(cfg, filePath(f), buf); filesCol.doc(f.id).update({ uploaded: true }); }
+      catch (e) { console.warn(e); }
+      finally { uploading.delete(f.id); }
+    }
+    const q = getDelQ(), left = [];
+    for (const p of q) { try { await ghDel(cfg, p); } catch (e) { left.push(p); } }
+    if (q.length) setDelQ(left);
+  }
+  window.addEventListener('online', () => setTimeout(pumpUploads, 800));
+  setInterval(pumpUploads, 90000);
+
+  // --- adding files ---
+  const fileInput = el('input'); fileInput.type = 'file'; fileInput.multiple = true; fileInput.accept = FILE_EXT.join(',');
+  fileInput.style.display = 'none'; document.body.appendChild(fileInput);
+  let pickTarget = null;
+  fileInput.addEventListener('change', () => { const fl = [...(fileInput.files || [])]; fileInput.value = ''; if (pickTarget) addFiles(fl, pickTarget.scope, pickTarget.folderId); });
+  function pickFiles(scope, folderId) { pickTarget = { scope, folderId: folderId || null }; fileInput.click(); }
+  function notify(text) { toastQueue.push({ html: '<div><small>Files</small><b>' + esc(text) + '</b></div>', open: () => {} }); showNextToast(); }
+  async function addFiles(list, scope, folderId) {
+    const ok = list.filter(f => FILE_EXT.includes(extOf(f.name)));
+    if (!ok.length) { notify('Only Excel files: .xlsx, .xls, .csv'); return; }
+    let lastId = null;
+    for (const f of ok) {
+      if (f.size > MAX_FILE) { notify(f.name + ' is bigger than 25 MB'); continue; }
+      const buf = await f.arrayBuffer();
+      const r = await filesCol.add({ name: f.name, ext: extOf(f.name), size: f.size, scope, folderId: folderId || null, createdAt: Date.now(), uploaded: false });
+      await idbPut(r.id, buf);
+      lastId = r.id;
+    }
+    if (scope === 'finance') { openSection('__fin__'); if (folderId) expanded.add('ff:' + folderId); }
+    else { openSection('__notes__'); if (folderId) expanded.add('nf:' + folderId); }
+    saveExpanded();
+    pumpUploads();
+    if (ok.length === 1 && lastId) goFile(lastId); else { renderAll(); notify(ok.length + ' files added'); }
+  }
+  function deleteFile(f, ask = true) {
+    if (ask && !confirm('Delete "' + f.name + '"?')) return;
+    filesCol.doc(f.id).delete(); idbDel(f.id);
+    if (f.uploaded) { setDelQ(getDelQ().concat([filePath(f)])); pumpUploads(); }
+    if (xState.fileId === f.id) { xState.fileId = null; if (currentPage === 'xls') { if (f.scope === 'finance') goFinance(f.folderId || null); else { currentPage = 'notes'; nState.noteId = null; renderAll(); } } }
+  }
+  async function downloadFile(f) {
+    let buf = await idbGet(f.id);
+    if (!buf) { const cfg = ghCfg(); if (!cfg) return alert('Set up sync first'); buf = await ghGet(cfg, filePath(f)); idbPut(f.id, buf); }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([buf])); a.download = f.name;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+  function fileMenu(f) {
+    return rowEl => [
+      { label: 'Rename', icon: 'edit', action: () => {
+        const base = f.name.replace(/\.[^.]+$/, '');
+        inlineEdit(rowEl.querySelector('.row-name'), base, v => filesCol.doc(f.id).update({ name: v + (f.ext || '') }));
+      } },
+      { label: 'Download', icon: 'down', action: () => downloadFile(f).catch(e => alert(e.message)) },
+      { label: 'Delete file', icon: 'trash', danger: true, action: () => deleteFile(f) }
+    ];
+  }
+  function filesIn(scope, folderId) { return files.filter(f => f.scope === scope && (f.folderId || null) === (folderId || null)).sort((a, b) => a.name.localeCompare(b.name, 'ru')); }
+  function fileRows(list, scope, folderId, indent) {
+    filesIn(scope, folderId).forEach(f => {
+      list.appendChild(row({
+        icon: I.sheet, name: f.name.replace(/\.[^.]+$/, ''), indent, meta: f.uploaded ? null : '•',
+        active: currentPage === 'xls' && xState.fileId === f.id,
+        onClick: () => goFile(f.id), menu: fileMenu(f)
+      }));
+    });
+  }
+
+  // --- drag and drop ---
+  const hasFiles = e => e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files');
+  function dropTarget(elm, getTarget) {
+    elm.addEventListener('dragover', e => { if (!hasFiles(e)) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'copy'; elm.classList.add('drop-hover'); hideDropOverlay(); });
+    elm.addEventListener('dragleave', () => elm.classList.remove('drop-hover'));
+    elm.addEventListener('drop', e => { if (!hasFiles(e)) return; e.preventDefault(); e.stopPropagation(); elm.classList.remove('drop-hover'); const t = getTarget(); addFiles([...e.dataTransfer.files], t.scope, t.folderId); });
+  }
+  function currentDropTarget() {
+    if (currentPage === 'finance') return { scope: 'finance', folderId: finState.folderId, label: 'Finance' + (finState.folderId ? ' / ' + ((finFolders.find(x => x.id === finState.folderId) || {}).name || '') : '') };
+    if (currentPage === 'xls') { const f = files.find(x => x.id === xState.fileId); if (f) return { scope: f.scope, folderId: f.folderId || null, label: 'the same folder' }; }
+    if (currentPage === 'notes') { const n = notes.find(x => x.id === nState.noteId); const fid = n ? n.folderId || null : null; return { scope: 'notes', folderId: fid, label: 'Notes' + (fid ? ' / ' + ((nFolders.find(x => x.id === fid) || {}).name || '') : '') }; }
+    return { scope: 'finance', folderId: null, label: 'Finance' };
+  }
+  const mainEl = document.getElementById('main');
+  const dropOv = el('div'); dropOv.id = 'drop-ov'; mainEl.appendChild(dropOv);
+  let ovTimer = null;
+  function hideDropOverlay() { dropOv.classList.remove('show'); }
+  mainEl.addEventListener('dragover', e => {
+    if (!hasFiles(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy';
+    dropOv.innerHTML = '<div>' + I.sheet + '<b>Drop to add to ' + esc(currentDropTarget().label) + '</b></div>';
+    dropOv.classList.add('show'); clearTimeout(ovTimer); ovTimer = setTimeout(hideDropOverlay, 250);
+  });
+  mainEl.addEventListener('drop', e => { if (!hasFiles(e)) return; e.preventDefault(); hideDropOverlay(); const t = currentDropTarget(); addFiles([...e.dataTransfer.files], t.scope, t.folderId); });
+  window.addEventListener('dragover', e => { if (hasFiles(e)) e.preventDefault(); });
+  window.addEventListener('drop', e => { if (hasFiles(e)) e.preventDefault(); });
+
+  // --- Finance tree ---
+  function fChildren(parentId) { return finFolders.filter(f => (f.parentId || null) === (parentId || null)).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ru')); }
+  function finPath(fid) { const chain = []; while (fid) { const f = finFolders.find(x => x.id === fid); if (!f) break; chain.unshift(f); fid = f.parentId; } return chain; }
+  function finMenuItems(folderId) {
+    return [
+      { label: 'Upload Excel file', icon: 'sheet', action: () => pickFiles('finance', folderId) },
+      { label: 'New folder', icon: 'folder', action: () => { openSection('__fin__'); if (folderId) expanded.add('ff:' + folderId); saveExpanded(); finState.creatingIn = folderId || null; renderTree(); } }
+    ];
+  }
+  function deleteFinFolder(f) {
+    const ids = [], walk = id => { ids.push(id); fChildren(id).forEach(c => walk(c.id)); }; walk(f.id);
+    const inside = files.filter(x => x.scope === 'finance' && ids.includes(x.folderId));
+    if (!confirm('Delete folder "' + f.name + '"' + (inside.length ? ' and ' + inside.length + ' files inside' : '') + '?')) return;
+    inside.forEach(x => deleteFile(x, false));
+    ids.forEach(id => finFoldersCol.doc(id).delete());
+    if (ids.includes(finState.folderId)) goFinance(null);
+  }
+  function finFolderForm(parentId, indent) {
+    const r = el('div', 'inline-form-row'); r.style.paddingLeft = indent + 'px';
+    const inp = el('input', 'fname'); inp.placeholder = 'folder name...';
+    const ok = el('button', 'fok', '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.5L13 4.5" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+    const done = () => { const name = inp.value.trim(); finState.creatingIn = undefined; if (name) finFoldersCol.add({ name, parentId: parentId || null, createdAt: Date.now() }); renderTree(); };
+    ok.addEventListener('click', e => { e.stopPropagation(); done(); });
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') done(); if (e.key === 'Escape') { finState.creatingIn = undefined; renderTree(); } });
+    inp.addEventListener('click', e => e.stopPropagation());
+    r.appendChild(inp); r.appendChild(ok); setTimeout(() => inp.focus(), 30);
+    return r;
+  }
+  function renderFinTree(list, parentId, depth) {
+    const indent = 6 + depth * 15;
+    fChildren(parentId).forEach(f => {
+      const key = 'ff:' + f.id, open = expanded.has(key);
+      const hasKids = fChildren(f.id).length || filesIn('finance', f.id).length;
+      const r = row({
+        icon: I.folder, name: f.name, indent, chevron: hasKids ? open : null,
+        active: currentPage === 'finance' && finState.folderId === f.id,
+        onClick: () => { if (open && currentPage === 'finance' && finState.folderId === f.id) expanded.delete(key); else expanded.add(key); saveExpanded(); goFinance(f.id); },
+        menu: rowEl => [{ label: 'Rename', icon: 'edit', action: () => inlineEdit(rowEl.querySelector('.row-name'), f.name, v => finFoldersCol.doc(f.id).update({ name: v })) }]
+          .concat(finMenuItems(f.id), [{ label: 'Delete folder', icon: 'trash', danger: true, action: () => deleteFinFolder(f) }])
+      });
+      dropTarget(r, () => ({ scope: 'finance', folderId: f.id }));
+      list.appendChild(r);
+      if (open) renderFinTree(list, f.id, depth + 1);
+    });
+    fileRows(list, 'finance', parentId, indent + 14);
+    if (finState.creatingIn !== undefined && (finState.creatingIn || null) === (parentId || null)) list.appendChild(finFolderForm(parentId, indent + 14));
+  }
+  function goFinance(folderId) { currentPage = 'finance'; finState.folderId = folderId || null; renderAll(); autoCollapseOnMobile(); }
+  function goFile(id) { currentPage = 'xls'; if (xState.fileId !== id) { xState.sheet = 0; xState.query = ''; } xState.fileId = id; renderAll(); autoCollapseOnMobile(); }
+
+  // --- Finance folder page ---
+  const pageF = el('div'); pageF.id = 'page-finance'; pageF.className = 'page-wrap'; pageF.style.display = 'none'; contentEl.appendChild(pageF);
+  function renderFinance() {
+    const fid = finState.folderId, f = finFolders.find(x => x.id === fid);
+    if (fid && !f) finState.folderId = null;
+    pageF.innerHTML = '';
+    const head = el('div', 'x-head');
+    const h = el('h1', 'x-title'); h.textContent = f ? f.name : 'Finance';
+    const up = el('button', 'x-btn primary'); up.textContent = 'Upload';
+    up.addEventListener('click', () => pickFiles('finance', finState.folderId));
+    const nf = el('button', 'x-btn'); nf.textContent = 'New folder';
+    nf.addEventListener('click', () => { openSection('__fin__'); if (fid) expanded.add('ff:' + fid); saveExpanded(); finState.creatingIn = finState.folderId; renderTree(); if (window.innerWidth < 760) document.getElementById('open-sidebar-btn')?.click(); });
+    head.appendChild(h); head.appendChild(nf); head.appendChild(up);
+    pageF.appendChild(head);
+    const subs = fChildren(finState.folderId), fl = filesIn('finance', finState.folderId);
+    if (subs.length) {
+      const g = el('div', 'fin-folders');
+      subs.forEach(s => {
+        const n = files.filter(x => x.scope === 'finance' && x.folderId === s.id).length;
+        const b = el('button', 'fin-folder', I.folder + '<span>' + esc(s.name) + '</span><small>' + n + '</small>');
+        b.addEventListener('click', () => { openSection('__fin__'); expanded.add('ff:' + s.id); saveExpanded(); goFinance(s.id); });
+        dropTarget(b, () => ({ scope: 'finance', folderId: s.id }));
+        g.appendChild(b);
+      });
+      pageF.appendChild(g);
+    }
+    if (fl.length) {
+      const list = el('div', 'fin-files');
+      fl.forEach(x => {
+        const r = el('button', 'fin-file', '<span class="fin-ic">' + I.sheet + '</span><span class="fin-n"><b>' + esc(x.name) + '</b><small>' +
+          fmtSize(x.size || 0) + ' · ' + fmtDay(tsDay(x.createdAt)) + (x.uploaded ? '' : ' · waiting to sync') + '</small></span>');
+        r.addEventListener('click', () => goFile(x.id));
+        list.appendChild(r);
+      });
+      pageF.appendChild(list);
+    }
+    const dz = el('div', 'fin-drop', I.sheet + '<b>' + (isTouch ? 'Tap to add Excel files' : 'Drag Excel files here') + '</b><span>.xlsx, .xls, .csv up to 25 MB. Read only.</span>');
+    dz.addEventListener('click', () => pickFiles('finance', finState.folderId));
+    dropTarget(dz, () => ({ scope: 'finance', folderId: finState.folderId }));
+    pageF.appendChild(dz);
+  }
+
+  // --- viewer ---
+  const pageX = el('div'); pageX.id = 'page-xls'; pageX.className = 'page-wrap'; pageX.style.display = 'none'; contentEl.appendChild(pageX);
+  let xlsLib = null, wbCache = { id: null, wb: null };
+  function loadXlsx() {
+    if (window.XLSX) return Promise.resolve(window.XLSX);
+    if (!xlsLib) xlsLib = new Promise((res, rej) => { const s = document.createElement('script'); s.src = './xlsx.full.min.js'; s.onload = () => res(window.XLSX); s.onerror = () => { xlsLib = null; rej(new Error('Could not load the Excel reader')); }; document.head.appendChild(s); });
+    return xlsLib;
+  }
+  let renderToken = 0;
+  async function renderXls() {
+    const f = files.find(x => x.id === xState.fileId);
+    const token = ++renderToken;
+    if (!f) { pageX.innerHTML = '<div class="x-empty">File not found.</div>'; return; }
+    if (pageX.dataset.fileId === f.id && pageX.dataset.name === f.name && pageX.querySelector('.xv-wrap')) return;
+    pageX.dataset.fileId = f.id; pageX.dataset.name = f.name;
+    pageX.innerHTML = '';
+    const head = el('div', 'x-head');
+    const h = el('h1', 'x-title xv-title'); h.textContent = f.name;
+    const dl = el('button', 'x-btn'); dl.textContent = 'Download';
+    dl.addEventListener('click', () => downloadFile(f).catch(e => alert(e.message)));
+    const del = el('button', 'x-btn ghost-danger'); del.textContent = 'Delete';
+    del.addEventListener('click', () => deleteFile(f));
+    head.appendChild(h); head.appendChild(dl); head.appendChild(del);
+    pageX.appendChild(head);
+    const body = el('div', 'xv-body', '<div class="x-empty">Opening...</div>');
+    pageX.appendChild(body);
+    try {
+      let wb = wbCache.id === f.id ? wbCache.wb : null;
+      if (!wb) {
+        let buf = await idbGet(f.id);
+        if (!buf) {
+          const cfg = ghCfg();
+          if (!cfg) throw new Error('This file is not on this device. Set up sync to download it.');
+          if (!navigator.onLine) throw new Error('This file is not downloaded on this device yet. Open it once with internet.');
+          buf = await ghGet(cfg, filePath(f)); idbPut(f.id, buf);
+        }
+        const X = await loadXlsx();
+        wb = X.read(new Uint8Array(buf), { type: 'array', cellDates: true, dense: false });
+        wbCache = { id: f.id, wb };
+      }
+      if (token !== renderToken) return;
+      drawWorkbook(body, wb);
+    } catch (e) {
+      if (token === renderToken) body.innerHTML = '<div class="x-empty">' + esc(e.message || 'Could not open this file') + '</div>';
+    }
+  }
+  const colName = n => { let s = ''; n++; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; };
+  function drawWorkbook(body, wb) {
+    const X = window.XLSX;
+    body.innerHTML = '';
+    const names = wb.SheetNames;
+    if (xState.sheet >= names.length) xState.sheet = 0;
+    const bar = el('div', 'xv-bar');
+    if (names.length > 1) {
+      const tabs = el('div', 'xv-tabs');
+      names.forEach((n, i) => { const t = el('button', 'xv-tab' + (i === xState.sheet ? ' on' : '')); t.textContent = n; t.addEventListener('click', () => { xState.sheet = i; drawWorkbook(body, wb); }); tabs.appendChild(t); });
+      bar.appendChild(tabs);
+    }
+    const q = el('input', 'xv-search'); q.type = 'search'; q.placeholder = 'Search in sheet...'; q.value = xState.query;
+    bar.appendChild(q);
+    body.appendChild(bar);
+    const info = el('div', 't-hint xv-info'); body.appendChild(info);
+    const wrap = el('div', 'xv-wrap'); body.appendChild(wrap);
+    const ws = wb.Sheets[names[xState.sheet]];
+    if (!ws || !ws['!ref']) { wrap.innerHTML = '<div class="x-empty">This sheet is empty.</div>'; return; }
+    const rng = X.utils.decode_range(ws['!ref']);
+    const rows = X.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '', blankrows: true });
+    let maxC = 0; rows.forEach(r => { for (let c = r.length - 1; c >= 0; c--) if (String(r[c]).trim() !== '') { maxC = Math.max(maxC, c + 1); break; } });
+    let last = rows.length; while (last > 0 && !rows[last - 1].some(v => String(v).trim() !== '')) last--;
+    const LIMIT = 3000;
+    const isNum = v => /^[-+(]?[\d\s .,]+[)%]?$/.test(String(v).trim()) || /^[-+]?[$€₸₽£]\s?[\d\s.,]+$/.test(String(v).trim());
+    const draw = () => {
+      const qq = xState.query.trim().toLowerCase();
+      let html = '<table class="xv"><thead><tr><th class="xv-rn"></th>';
+      for (let c = 0; c < maxC; c++) html += '<th>' + colName(rng.s.c + c) + '</th>';
+      html += '</tr></thead><tbody>';
+      let shown = 0, matched = 0;
+      for (let r = 0; r < last && shown < LIMIT; r++) {
+        const rowv = rows[r] || [];
+        if (qq && !rowv.some(v => String(v).toLowerCase().includes(qq))) continue;
+        matched++; shown++;
+        html += '<tr><td class="xv-rn">' + (rng.s.r + r + 1) + '</td>';
+        for (let c = 0; c < maxC; c++) { const v = rowv[c] == null ? '' : rowv[c]; html += '<td' + (v !== '' && isNum(v) ? ' class="n"' : '') + '>' + esc(v) + '</td>'; }
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+      wrap.innerHTML = maxC ? html : '<div class="x-empty">This sheet is empty.</div>';
+      info.textContent = (qq ? matched + ' matching rows' : last + ' rows × ' + maxC + ' columns') + (shown >= LIMIT ? ' · showing the first ' + LIMIT : '');
+    };
+    let t = null;
+    q.addEventListener('input', () => { xState.query = q.value; clearTimeout(t); t = setTimeout(draw, 160); });
+    draw();
+  }
+  function filePathChain(f) { return f.scope === 'finance' ? finPath(f.folderId) : (() => { const chain = []; let fid = f.folderId; while (fid) { const x = nFolders.find(y => y.id === fid); if (!x) break; chain.unshift(x); fid = x.parentId; } return chain; })(); }
+
   // ================= navigation =================
   function goTerritory(boardId) { currentPage = 'territory'; tState.boardId = boardId || null; renderAll(); autoCollapseOnMobile(); }
   function goAch(tab) { currentPage = 'achievements'; aTab = tab; renderAll(); autoCollapseOnMobile(); }
@@ -1022,6 +1430,8 @@
     note: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M4 1.8H10L12.5 4.3V14.2H4Z"/><path d="M6 7.5H10.5M6 10H10.5"/></svg>',
     folder: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 6.5C3 5.7 3.7 5 4.5 5H9L11 7H19.5C20.3 7 21 7.7 21 8.5V17.5C21 18.3 20.3 19 19.5 19H4.5C3.7 19 3 18.3 3 17.5Z"/></svg>',
     level: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3L20 7.5V16.5L12 21L4 16.5V7.5Z"/><path d="M8.5 13.5L12 10L15.5 13.5"/></svg>',
+    sheet: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M2 6H14M2 10H14M6.5 2V14"/></svg>',
+    finance: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M4 20V10M10 20V4M16 20V13M22 20H2"/></svg>',
     plus: '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>'
   };
   function row(opts) {
@@ -1059,12 +1469,27 @@
   window.renderExtraSidebar = function (list) {
     scheduleAch();
     const nOpen = expanded.has('__notes__');
-    list.appendChild(row({
+    const notesRow = row({
       icon: I.notes, name: 'Notes', bold: true,
       onClick: () => { if (nOpen) expanded.delete('__notes__'); else openSection('__notes__'); saveExpanded(); renderTree(); },
       menu: () => notesMenuItems(null)
-    }));
+    });
+    dropTarget(notesRow, () => ({ scope: 'notes', folderId: null }));
+    list.appendChild(notesRow);
     if (nOpen) renderNotesTree(list, null, 1);
+    const fOpen = expanded.has('__fin__');
+    const finRow = row({
+      icon: I.finance, name: 'Finance', bold: true,
+      onClick: () => { if (fOpen) expanded.delete('__fin__'); else openSection('__fin__'); saveExpanded(); renderTree(); },
+      menu: () => finMenuItems(null).concat([{ label: 'Open Finance', icon: 'folder', action: () => goFinance(null) }])
+    });
+    dropTarget(finRow, () => ({ scope: 'finance', folderId: null }));
+    list.appendChild(finRow);
+    if (fOpen) {
+      if (!finFolders.length && !filesIn('finance', null).length && finState.creatingIn === undefined)
+        list.appendChild(row({ icon: I.sheet, name: 'Add files', indent: 27, onClick: () => goFinance(null) }));
+      renderFinTree(list, null, 1);
+    }
     const lOpen = expanded.has('__lvl__');
     list.appendChild(row({
       icon: I.level, name: 'Levels', bold: true,
@@ -1121,7 +1546,7 @@
   };
 
   window.renderExtraBreadcrumbs = function (bc) {
-    if (!['territory', 'achievements', 'notes', 'levels', 'profile'].includes(currentPage)) return false;
+    if (!['territory', 'achievements', 'notes', 'levels', 'profile', 'finance', 'xls'].includes(currentPage)) return false;
     bc.innerHTML = '';
     const crumb = (text, current, onClick) => {
       const c = el('span', 'crumb' + (current ? ' current' : '')); c.textContent = text;
@@ -1130,6 +1555,20 @@
     };
     const sep = () => { const s = el('span', 'crumb-sep'); s.textContent = '/'; bc.appendChild(s); };
     if (currentPage === 'profile') { crumb('Profile', true); return true; }
+    if (currentPage === 'finance') {
+      const chain = finPath(finState.folderId);
+      crumb('Finance', !chain.length, () => goFinance(null));
+      chain.forEach((f, i) => { sep(); crumb(f.name, i === chain.length - 1, () => goFinance(f.id)); });
+      return true;
+    }
+    if (currentPage === 'xls') {
+      const f = files.find(x => x.id === xState.fileId);
+      if (!f) { crumb('File', true); return true; }
+      if (f.scope === 'finance') crumb('Finance', false, () => goFinance(null)); else crumb('Notes', false);
+      filePathChain(f).forEach(x => { sep(); crumb(x.name, false, f.scope === 'finance' ? () => goFinance(x.id) : null); });
+      sep(); crumb(f.name, true);
+      return true;
+    }
     if (currentPage === 'levels') {
       const lv = levels.find(x => x.id === lState.id);
       crumb('Levels', !lv, () => goLevel(null));
@@ -1157,6 +1596,11 @@
     pageT.style.display = currentPage === 'territory' ? 'block' : 'none';
     pageA.style.display = currentPage === 'achievements' ? 'block' : 'none';
     pageN.style.display = currentPage === 'notes' ? 'block' : 'none';
+    pageF.style.display = currentPage === 'finance' ? 'block' : 'none';
+    pageX.style.display = currentPage === 'xls' ? 'block' : 'none';
+    if (currentPage !== 'xls') pageX.dataset.fileId = '';
+    if (currentPage === 'finance') renderFinance();
+    if (currentPage === 'xls') renderXls();
     pageP.style.display = currentPage === 'profile' ? 'block' : 'none';
     if (currentPage === 'profile') window.renderProfilePage();
     window.renderProfileCard();
@@ -1865,7 +2309,7 @@
   }
   applyTheme((() => { try { return localStorage.getItem('tgr_theme'); } catch (e) { return null; } })());
 
-  const APP_VERSION = '16';
+  const APP_VERSION = '17';
   async function checkForUpdates(btn, msg) {
     btn.disabled = true; btn.textContent = 'Checking...';
     try {
