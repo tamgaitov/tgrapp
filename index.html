@@ -971,7 +971,7 @@
     todoRow.appendChild(todoName);
     todoRow.addEventListener('click', () => {
       if (!rootChildren.length) { navigateTo(null); return; }
-      if (rootExpanded) expanded.delete('__root__'); else expanded.add('__root__');
+      if (rootExpanded) expanded.delete('__root__'); else openSection('__root__');
       saveExpanded();
       renderTree();
     });
@@ -1019,7 +1019,7 @@
     gymRow.appendChild(gymIcon);
     gymRow.appendChild(gymName);
     gymRow.addEventListener('click', () => {
-      if (gymExpanded) expanded.delete('__gym__'); else expanded.add('__gym__');
+      if (gymExpanded) expanded.delete('__gym__'); else openSection('__gym__');
       saveExpanded();
       renderTree();
     });
@@ -1986,7 +1986,10 @@
       tasksCol.doc(t.id).update(patch).catch(() => {});
     }
   }
-  window.PAGE_VERSION = '15';
+  window.PAGE_VERSION = '16';
+  const MAIN_SECTIONS = ['__root__', '__gym__', '__notes__', '__lvl__', '__terr__', '__ach__'];
+  function openSection(key) { MAIN_SECTIONS.forEach(k => { if (k !== key) expanded.delete(k); }); expanded.add(key); }
+  window.openSection = openSection;
   function inlineEdit(target, value, onSave) {
     if (!target || target.querySelector('.inline-edit')) return;
     const prevHTML = target.innerHTML;

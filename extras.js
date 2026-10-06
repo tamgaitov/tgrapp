@@ -525,14 +525,14 @@
     return [
       { label: 'New note', icon: 'note', action: () => newNote(folderId) },
       { label: 'New folder', icon: 'folder', action: () => {
-        expanded.add('__notes__'); if (folderId) expanded.add('nf:' + folderId); saveExpanded();
+        openSection('__notes__'); if (folderId) expanded.add('nf:' + folderId); saveExpanded();
         nState.creatingIn = folderId || null; renderTree();
       } }
     ];
   }
   function newNote(folderId) {
     const now = Date.now();
-    expanded.add('__notes__'); if (folderId) expanded.add('nf:' + folderId); saveExpanded();
+    openSection('__notes__'); if (folderId) expanded.add('nf:' + folderId); saveExpanded();
     notesCol.add({ title: '', body: '', folderId: folderId || null, createdAt: now, updatedAt: now }).then(r => { focusTitle = true; goNote(r.id); });
   }
   function nChildren(parentId) { return nFolders.filter(f => (f.parentId || null) === (parentId || null)).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ru')); }
@@ -1061,16 +1061,16 @@
     const nOpen = expanded.has('__notes__');
     list.appendChild(row({
       icon: I.notes, name: 'Notes', bold: true,
-      onClick: () => { if (nOpen) expanded.delete('__notes__'); else expanded.add('__notes__'); saveExpanded(); renderTree(); },
+      onClick: () => { if (nOpen) expanded.delete('__notes__'); else openSection('__notes__'); saveExpanded(); renderTree(); },
       menu: () => notesMenuItems(null)
     }));
     if (nOpen) renderNotesTree(list, null, 1);
     const lOpen = expanded.has('__lvl__');
     list.appendChild(row({
       icon: I.level, name: 'Levels', bold: true,
-      onClick: () => { if (lOpen) expanded.delete('__lvl__'); else expanded.add('__lvl__'); saveExpanded(); renderTree(); },
+      onClick: () => { if (lOpen) expanded.delete('__lvl__'); else openSection('__lvl__'); saveExpanded(); renderTree(); },
       menu: () => [
-        { label: 'New level', icon: 'level', action: () => { expanded.add('__lvl__'); saveExpanded(); lState.creating = true; goLevel(null); } },
+        { label: 'New level', icon: 'level', action: () => { openSection('__lvl__'); saveExpanded(); lState.creating = true; goLevel(null); } },
         { label: 'All levels', icon: 'level', action: () => goLevel(null) }
       ]
     }));
@@ -1091,9 +1091,9 @@
     list.appendChild(row({
       icon: I.territory, name: 'Territory progress', bold: true,
       active: currentPage === 'territory' && !tState.boardId,
-      onClick: () => { if (tOpen) expanded.delete('__terr__'); else expanded.add('__terr__'); saveExpanded(); renderTree(); },
+      onClick: () => { if (tOpen) expanded.delete('__terr__'); else openSection('__terr__'); saveExpanded(); renderTree(); },
       menu: () => [
-        { label: 'New board', icon: 'board', action: () => { expanded.add('__terr__'); saveExpanded(); tState.creating = true; goTerritory(null); } },
+        { label: 'New board', icon: 'board', action: () => { openSection('__terr__'); saveExpanded(); tState.creating = true; goTerritory(null); } },
         { label: 'All boards', icon: 'board', action: () => goTerritory(null) }
       ]
     }));
@@ -1111,7 +1111,7 @@
     const aOpen = expanded.has('__ach__');
     list.appendChild(row({
       icon: I.trophy, name: 'Achievements', bold: true,
-      onClick: () => { if (aOpen) expanded.delete('__ach__'); else expanded.add('__ach__'); saveExpanded(); renderTree(); }
+      onClick: () => { if (aOpen) expanded.delete('__ach__'); else openSection('__ach__'); saveExpanded(); renderTree(); }
     }));
     if (aOpen) {
       list.appendChild(row({ icon: I.shelf, name: 'My achievements', indent: 27, active: currentPage === 'achievements' && aTab === 'mine', onClick: () => goAch('mine') }));
@@ -1865,7 +1865,7 @@
   }
   applyTheme((() => { try { return localStorage.getItem('tgr_theme'); } catch (e) { return null; } })());
 
-  const APP_VERSION = '15';
+  const APP_VERSION = '16';
   async function checkForUpdates(btn, msg) {
     btn.disabled = true; btn.textContent = 'Checking...';
     try {
