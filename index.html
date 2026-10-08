@@ -1986,8 +1986,8 @@
       tasksCol.doc(t.id).update(patch).catch(() => {});
     }
   }
-  window.PAGE_VERSION = '17';
-  const MAIN_SECTIONS = ['__root__', '__gym__', '__notes__', '__fin__', '__lvl__', '__terr__', '__ach__'];
+  window.PAGE_VERSION = '18';
+  const MAIN_SECTIONS = ['__root__', '__gym__', '__notes__', '__fin__', '__mand__', '__lvl__', '__terr__', '__ach__'];
   function openSection(key) { MAIN_SECTIONS.forEach(k => { if (k !== key) expanded.delete(k); }); expanded.add(key); }
   window.openSection = openSection;
   function inlineEdit(target, value, onSave) {

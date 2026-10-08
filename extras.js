@@ -396,6 +396,69 @@
   table.xv td.n { text-align: right; }
   table.xv tbody tr:hover td { background: var(--accent-soft); }
   table.xv tbody tr:hover td.xv-rn { background: var(--bg); }
+
+  /* 9x9 */
+  #page-mandala { max-width: 980px; }
+  .md-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+  .md-card { display: flex; gap: 14px; align-items: center; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 14px;
+    padding: 12px 14px; cursor: pointer; text-align: left; color: var(--text); font-family: inherit; }
+  .md-card:hover { border-color: var(--accent); }
+  .md-card-b { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+  .md-card-b b { font-size: 15px; }
+  .md-card-b span { font-size: 13px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .md-card-b small { font-size: 11.5px; color: var(--text-dim); }
+  .md-mini { display: grid; grid-template-columns: repeat(3, 14px); gap: 3px; flex-shrink: 0; }
+  .md-mini i { width: 14px; height: 14px; border-radius: 3px; background: var(--border); display: block; }
+  .md-mini i[data-on] { background: color-mix(in srgb, var(--a) 70%, transparent); }
+  .md-mini i.g { background: var(--accent); opacity: .35; }
+  .md-mini i.g[data-on] { opacity: 1; }
+  .md-sub { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .md-views { display: flex; gap: 6px; }
+  .md-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .md-block { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
+  .md-grid.ro .md-block { cursor: pointer; border-radius: 8px; }
+  .md-grid.ro .md-block:hover { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .md-cell { position: relative; aspect-ratio: 1; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 7px;
+    display: flex; align-items: center; justify-content: center; padding: 4px; overflow: hidden; cursor: text; min-width: 0; }
+  .md-grid.ro .md-cell { cursor: pointer; }
+  .md-cell.area { background: color-mix(in srgb, var(--a) 16%, var(--bg-elevated)); border-color: color-mix(in srgb, var(--a) 45%, var(--border)); }
+  .md-cell.goal { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .md-t { width: 100%; max-height: 100%; overflow: auto; text-align: center; font-size: 11px; line-height: 1.25; outline: none; overflow-wrap: anywhere;
+    white-space: pre-wrap; scrollbar-width: none; }
+  .md-t::-webkit-scrollbar { display: none; }
+  .md-cell.area .md-t { font-weight: 600; }
+  .md-cell.goal .md-t { font-weight: 800; font-size: 12px; }
+  .md-cell:focus-within { box-shadow: 0 0 0 2px var(--accent); }
+  .md-cell.goal:focus-within { box-shadow: 0 0 0 2px var(--text); }
+  .md-cell[data-ph]:not([data-ph=""])::before { content: attr(data-ph); position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 10.5px; color: var(--text-dim); opacity: .7; pointer-events: none; text-align: center; padding: 4px; }
+  .md-cell.goal[data-ph]:not([data-ph=""])::before { color: #fff; opacity: .75; }
+  .md-cell:focus-within::before { display: none; }
+  .md-focus { display: grid; grid-template-columns: minmax(0, 520px) 200px; gap: 18px; align-items: start; }
+  .md-block.big { gap: 6px; }
+  .md-cell.big { border-radius: 12px; padding: 8px; }
+  .md-cell.big .md-t { font-size: 14px; line-height: 1.3; }
+  .md-cell.big.goal .md-t { font-size: 16px; }
+  .md-cell.big[data-ph]:not([data-ph=""])::before { font-size: 13px; }
+  .md-open { position: absolute; right: 4px; bottom: 4px; width: 22px; height: 22px; border-radius: 50%; border: none; cursor: pointer;
+    background: color-mix(in srgb, var(--a, var(--accent)) 30%, var(--bg)); color: var(--text); display: flex; align-items: center; justify-content: center; padding: 0; }
+  .md-open.back { left: 4px; right: auto; }
+  .md-open:hover { background: var(--a, var(--accent)); color: #fff; }
+  .md-nav { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+  .md-nav-b { aspect-ratio: 1; border-radius: 8px; border: 1px solid var(--border); background: color-mix(in srgb, var(--a, transparent) 14%, var(--bg-elevated));
+    color: var(--text-dim); font-size: 10px; line-height: 1.2; padding: 4px; cursor: pointer; overflow: hidden; font-family: inherit;
+    display: flex; align-items: center; justify-content: center; text-align: center; overflow-wrap: anywhere; }
+  .md-nav-b.g { background: color-mix(in srgb, var(--accent) 20%, var(--bg-elevated)); }
+  .md-nav-b.on { border-color: var(--a, var(--accent)); box-shadow: 0 0 0 1.5px var(--a, var(--accent)); color: var(--text); font-weight: 700; }
+  @media (max-width: 759px) {
+    .md-grid { gap: 5px; }
+    .md-block { gap: 2px; }
+    .md-cell { border-radius: 4px; padding: 1px; }
+    .md-t { font-size: 7px; line-height: 1.15; }
+    .md-cell.goal .md-t { font-size: 8px; }
+    .md-focus { grid-template-columns: 1fr; }
+    .md-nav { max-width: 240px; }
+  }
   @media (max-width: 520px) { .t-stats { grid-template-columns: repeat(2, 1fr); } .t-grid { gap: 4px; } }
   `;
   const styleEl = document.createElement('style');
@@ -524,6 +587,7 @@
     board: () => I.territory,
     edit: () => '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M3 13L3.6 10.4L11 3L13 5L5.6 12.4Z"/><path d="M9.5 4.5L11.5 6.5"/></svg>',
     level: () => I.level,
+    grid9: () => I.grid9,
     sheet: () => I.sheet,
     down: () => '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.5V10.5M4.5 7L8 10.5L11.5 7M3 13.5H13"/></svg>'
   };
@@ -1414,6 +1478,195 @@
   }
   function filePathChain(f) { return f.scope === 'finance' ? finPath(f.folderId) : (() => { const chain = []; let fid = f.folderId; while (fid) { const x = nFolders.find(y => y.id === fid); if (!x) break; chain.unshift(x); fid = x.parentId; } return chain; })(); }
 
+  // ================= 9x9 (mandala charts) =================
+  const mandCol = SyncDB.collection('mandalas');
+  let mandalas = [];
+  const mState = { id: null, view: null, block: 4, creating: false };
+  mandCol.orderBy('createdAt', 'asc').onSnapshot(s => { mandalas = s.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); });
+  // block b (0..8, 4 = center), cell c (0..8, 4 = center of the block)
+  // area i of the center block (cell i, i != 4) is the same thing as the center of outer block i
+  const canon = (b, c) => (c === 4 && b !== 4) ? '4-' + b : b + '-' + c;
+  const mCell = (m, b, c) => ((m.cells || {})[canon(b, c)] || '');
+  const AREA_COLORS = ['#3f8de0', '#33c27a', '#e0823e', '#9b5de5', null, '#e0b83e', '#e03e8b', '#2fb6b6', '#e05a3e'];
+  const isWide = () => window.innerWidth >= 760;
+  function mFilled(m) { let n = 0; for (let b = 0; b < 9; b++) for (let c = 0; c < 9; c++) { if (b !== 4 && c === 4) continue; if (mCell(m, b, c).trim()) n++; } return n; }
+  function goMand(id) {
+    const ae = document.activeElement; if (ae && pageM.contains(ae)) ae.blur();
+    currentPage = 'mandala';
+    if (mState.id !== id) { mState.block = 4; mState.view = null; }
+    mState.id = id || null;
+    renderAll(); autoCollapseOnMobile();
+  }
+  function createMand(name) {
+    const now = Date.now();
+    return mandCol.add({ name, cells: {}, createdAt: now, order: now }).then(r => { openSection('__mand__'); saveExpanded(); goMand(r.id); return r; });
+  }
+  function deleteMand(m) {
+    if (!confirm('Delete "' + m.name + '"? Everything written in it will be lost.')) return;
+    mandCol.doc(m.id).delete();
+    if (mState.id === m.id) { mState.id = null; if (currentPage === 'mandala') renderAll(); }
+  }
+  const mSaveTimers = {};
+  function saveCell(m, b, c, text) {
+    const key = canon(b, c);
+    const cells = { ...(m.cells || {}) };
+    if (text) cells[key] = text; else delete cells[key];
+    m.cells = cells;
+    clearTimeout(mSaveTimers[m.id]);
+    mSaveTimers[m.id] = setTimeout(() => mandCol.doc(m.id).update({ cells: m.cells }), 400);
+  }
+
+  const pageM = el('div'); pageM.id = 'page-mandala'; pageM.className = 'page-wrap'; pageM.style.display = 'none'; contentEl.appendChild(pageM);
+  function renderMandala() {
+    const m = mandalas.find(x => x.id === mState.id);
+    if (mState.id && !m) mState.id = null;
+    if (m) renderMandChart(m); else renderMandList();
+  }
+  function miniPreview(m) {
+    let h = '<div class="md-mini">';
+    for (let c = 0; c < 9; c++) {
+      const t = mCell(m, 4, c), col = AREA_COLORS[c];
+      h += '<i' + (c === 4 ? ' class="g"' : col ? ' style="--a:' + col + '"' : '') + (t ? ' data-on="1"' : '') + '></i>';
+    }
+    return h + '</div>';
+  }
+  function renderMandList() {
+    pageM.innerHTML = '';
+    const head = el('div', 'x-head');
+    const h = el('h1', 'x-title'); h.textContent = '9x9';
+    const nb = el('button', 'x-btn primary'); nb.textContent = 'New chart';
+    nb.addEventListener('click', () => { mState.creating = true; renderMandList(); });
+    head.appendChild(h); head.appendChild(nb); pageM.appendChild(head);
+    if (mState.creating) {
+      const f = el('div', 'x-form');
+      const inp = el('input'); inp.placeholder = 'Name, e.g. 2027 goals'; inp.maxLength = 40;
+      const ok = el('button', 'x-btn primary'); ok.textContent = 'Create';
+      const cancel = el('button', 'x-btn'); cancel.textContent = 'Cancel';
+      const submit = () => { const v = inp.value.trim(); if (!v) return; mState.creating = false; createMand(v); };
+      ok.addEventListener('click', submit);
+      cancel.addEventListener('click', () => { mState.creating = false; renderMandList(); });
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') cancel.click(); });
+      f.appendChild(inp); f.appendChild(ok); f.appendChild(cancel); pageM.appendChild(f);
+      setTimeout(() => inp.focus(), 30);
+    }
+    if (!mandalas.length) {
+      const e = el('div', 'x-empty');
+      e.innerHTML = 'Write your main goal in the center, 8 things it needs around it, then 8 concrete actions for each of those.';
+      pageM.appendChild(e); return;
+    }
+    const grid = el('div', 'md-cards');
+    mandalas.slice().sort((a, b) => (a.order || 0) - (b.order || 0)).forEach(m => {
+      const goal = mCell(m, 4, 4);
+      const card = el('button', 'md-card', miniPreview(m) + '<div class="md-card-b"><b>' + esc(m.name) + '</b><span>' +
+        (goal ? esc(goal) : 'No goal yet') + '</span><small>' + mFilled(m) + ' / 72 filled</small></div>');
+      card.addEventListener('click', () => goMand(m.id));
+      grid.appendChild(card);
+    });
+    pageM.appendChild(grid);
+  }
+
+  function cellEl(m, b, c, editable, big) {
+    const isGoal = b === 4 && c === 4;
+    const isArea = (b === 4 && c !== 4) || (b !== 4 && c === 4);
+    const area = b === 4 ? c : b;
+    const col = AREA_COLORS[area];
+    const d = el('div', 'md-cell' + (isGoal ? ' goal' : isArea ? ' area' : '') + (big ? ' big' : ''));
+    if (col && !isGoal) d.style.setProperty('--a', col);
+    const t = el('div', 'md-t');
+    const txt = mCell(m, b, c);
+    t.textContent = txt;
+    d.appendChild(t);
+    if (!txt && editable) d.dataset.ph = isGoal ? 'Main goal' : isArea ? 'Area ' + (area < 4 ? area + 1 : area) : '';
+    if (editable) {
+      try { t.contentEditable = 'plaintext-only'; } catch (e) { t.contentEditable = 'true'; }
+      if (t.contentEditable !== 'plaintext-only') t.contentEditable = 'true';
+      t.spellcheck = false;
+      t.addEventListener('input', () => { const v = t.innerText.replace(/\n{3,}/g, '\n\n').trim(); d.dataset.ph = v ? '' : (d.dataset.ph0 || ''); saveCell(m, b, c, v); });
+      d.dataset.ph0 = d.dataset.ph || '';
+      t.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); t.blur(); } if (e.key === 'Escape') t.blur(); });
+      t.addEventListener('blur', () => { if (isArea) setTimeout(() => { if (!pageM.contains(document.activeElement) || !document.activeElement.isContentEditable) renderMandala(); }, 0); });
+      d.addEventListener('click', e => { if (e.target === d) t.focus(); });
+    }
+    return d;
+  }
+
+  function renderMandChart(m) {
+    if (!mState.view) mState.view = isWide() ? 'grid' : 'block';
+    pageM.innerHTML = '';
+    const head = el('div', 'x-head');
+    const nameIn = el('input', 't-name-input'); nameIn.value = m.name; nameIn.maxLength = 40;
+    const saveName = () => { const v = nameIn.value.trim(); if (v && v !== m.name) mandCol.doc(m.id).update({ name: v }); else nameIn.value = m.name; };
+    nameIn.addEventListener('blur', saveName);
+    nameIn.addEventListener('keydown', e => { if (e.key === 'Enter') nameIn.blur(); });
+    const tabs = el('div', 'md-views');
+    [['grid', 'Whole chart'], ['block', 'One block']].forEach(([v, l]) => {
+      const t = el('button', 'tab-btn' + (mState.view === v ? ' active' : '')); t.textContent = l;
+      t.addEventListener('click', () => { mState.view = v; renderMandChart(m); });
+      tabs.appendChild(t);
+    });
+    const del = el('button', 'x-btn ghost-danger'); del.textContent = 'Delete';
+    del.addEventListener('click', () => deleteMand(m));
+    head.appendChild(nameIn); head.appendChild(del);
+    pageM.appendChild(head);
+    const sub = el('div', 'md-sub');
+    sub.appendChild(tabs);
+    const meta = el('span', 't-hint'); meta.textContent = mFilled(m) + ' / 72 filled';
+    sub.appendChild(meta);
+    pageM.appendChild(sub);
+
+    if (mState.view === 'grid') {
+      const editable = isWide();
+      const g = el('div', 'md-grid' + (editable ? '' : ' ro'));
+      for (let b = 0; b < 9; b++) {
+        const blk = el('div', 'md-block' + (b === 4 ? ' center' : ''));
+        for (let c = 0; c < 9; c++) blk.appendChild(cellEl(m, b, c, editable, false));
+        if (!editable) blk.addEventListener('click', () => { mState.view = 'block'; mState.block = b; renderMandChart(m); });
+        g.appendChild(blk);
+      }
+      pageM.appendChild(g);
+      if (!editable) { const hnt = el('div', 't-hint'); hnt.style.marginTop = '10px'; hnt.textContent = 'Tap a block to open and edit it.'; pageM.appendChild(hnt); }
+      else { const hnt = el('div', 't-hint'); hnt.style.marginTop = '10px'; hnt.textContent = 'Click any cell to write. Enter saves, Shift+Enter makes a new line. The 8 areas around the goal also appear in the middle of the outer blocks.'; pageM.appendChild(hnt); }
+      return;
+    }
+
+    // one block view
+    const wrap = el('div', 'md-focus');
+    const nav = el('div', 'md-nav');
+    for (let b = 0; b < 9; b++) {
+      const label = b === 4 ? (mCell(m, 4, 4) || 'Goal') : (mCell(m, 4, b) || 'Area');
+      const n = el('button', 'md-nav-b' + (b === mState.block ? ' on' : '') + (b === 4 ? ' g' : ''));
+      if (AREA_COLORS[b]) n.style.setProperty('--a', AREA_COLORS[b]);
+      n.textContent = label; n.title = label;
+      n.addEventListener('click', () => { mState.block = b; renderMandChart(m); });
+      nav.appendChild(n);
+    }
+    const blk = el('div', 'md-block big' + (mState.block === 4 ? ' center' : ''));
+    for (let c = 0; c < 9; c++) {
+      const ce = cellEl(m, mState.block, c, true, true);
+      if (mState.block === 4 && c !== 4) {
+        const go = el('button', 'md-open', '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8L6 12.5"/></svg>');
+        go.title = 'Open this area'; go.setAttribute('aria-label', 'Open this area');
+        go.addEventListener('click', e => { e.stopPropagation(); mState.block = c; renderMandChart(m); });
+        ce.appendChild(go);
+      }
+      if (mState.block !== 4 && c === 4) {
+        const back = el('button', 'md-open back', '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5L5.5 8L10 12.5"/></svg>');
+        back.title = 'Back to the goal'; back.setAttribute('aria-label', 'Back to the goal');
+        back.addEventListener('click', e => { e.stopPropagation(); mState.block = 4; renderMandChart(m); });
+        ce.appendChild(back);
+      }
+      blk.appendChild(ce);
+    }
+    wrap.appendChild(blk);
+    wrap.appendChild(nav);
+    pageM.appendChild(wrap);
+    const hnt = el('div', 't-hint'); hnt.style.marginTop = '10px';
+    hnt.textContent = mState.block === 4 ? 'Write the goal in the middle and 8 areas around it. The arrow on an area opens its block.' : 'Write 8 concrete actions around this area.';
+    pageM.appendChild(hnt);
+  }
+  let mWide = isWide();
+  window.addEventListener('resize', () => { const w = isWide(); if (w !== mWide) { mWide = w; mState.view = null; if (currentPage === 'mandala') renderMandala(); } });
+
   // ================= navigation =================
   function goTerritory(boardId) { currentPage = 'territory'; tState.boardId = boardId || null; renderAll(); autoCollapseOnMobile(); }
   function goAch(tab) { currentPage = 'achievements'; aTab = tab; renderAll(); autoCollapseOnMobile(); }
@@ -1432,6 +1685,7 @@
     level: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3L20 7.5V16.5L12 21L4 16.5V7.5Z"/><path d="M8.5 13.5L12 10L15.5 13.5"/></svg>',
     sheet: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M2 6H14M2 10H14M6.5 2V14"/></svg>',
     finance: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M4 20V10M10 20V4M16 20V13M22 20H2"/></svg>',
+    grid9: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" style="vertical-align:-2px"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3V21M15 3V21M3 9H21M3 15H21"/><rect x="9" y="9" width="6" height="6" fill="currentColor" stroke="none" opacity=".55"/></svg>',
     plus: '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>'
   };
   function row(opts) {
@@ -1490,6 +1744,29 @@
         list.appendChild(row({ icon: I.sheet, name: 'Add files', indent: 27, onClick: () => goFinance(null) }));
       renderFinTree(list, null, 1);
     }
+    const mOpen = expanded.has('__mand__');
+    list.appendChild(row({
+      icon: I.grid9, name: '9x9', bold: true,
+      onClick: () => { if (mOpen) expanded.delete('__mand__'); else openSection('__mand__'); saveExpanded(); renderTree(); },
+      menu: () => [
+        { label: 'New chart', icon: 'grid9', action: () => { openSection('__mand__'); saveExpanded(); mState.creating = true; goMand(null); } },
+        { label: 'All charts', icon: 'grid9', action: () => goMand(null) }
+      ]
+    }));
+    if (mOpen) {
+      if (!mandalas.length) list.appendChild(row({ icon: I.plus, name: 'New chart', indent: 27, onClick: () => { mState.creating = true; goMand(null); } }));
+      mandalas.slice().sort((a, b) => (a.order || 0) - (b.order || 0)).forEach(m => {
+        list.appendChild(row({
+          icon: I.grid9, name: m.name, indent: 27,
+          active: currentPage === 'mandala' && mState.id === m.id,
+          onClick: () => goMand(m.id),
+          menu: rowEl => [
+            { label: 'Rename', icon: 'edit', action: () => inlineEdit(rowEl.querySelector('.row-name'), m.name, v => mandCol.doc(m.id).update({ name: v })) },
+            { label: 'Delete chart', icon: 'trash', danger: true, action: () => deleteMand(m) }
+          ]
+        }));
+      });
+    }
     const lOpen = expanded.has('__lvl__');
     list.appendChild(row({
       icon: I.level, name: 'Levels', bold: true,
@@ -1546,7 +1823,7 @@
   };
 
   window.renderExtraBreadcrumbs = function (bc) {
-    if (!['territory', 'achievements', 'notes', 'levels', 'profile', 'finance', 'xls'].includes(currentPage)) return false;
+    if (!['territory', 'achievements', 'notes', 'levels', 'profile', 'finance', 'xls', 'mandala'].includes(currentPage)) return false;
     bc.innerHTML = '';
     const crumb = (text, current, onClick) => {
       const c = el('span', 'crumb' + (current ? ' current' : '')); c.textContent = text;
@@ -1555,6 +1832,12 @@
     };
     const sep = () => { const s = el('span', 'crumb-sep'); s.textContent = '/'; bc.appendChild(s); };
     if (currentPage === 'profile') { crumb('Profile', true); return true; }
+    if (currentPage === 'mandala') {
+      const m = mandalas.find(x => x.id === mState.id);
+      crumb('9x9', !m, () => goMand(null));
+      if (m) { sep(); crumb(m.name, true); }
+      return true;
+    }
     if (currentPage === 'finance') {
       const chain = finPath(finState.folderId);
       crumb('Finance', !chain.length, () => goFinance(null));
@@ -1597,6 +1880,8 @@
     pageA.style.display = currentPage === 'achievements' ? 'block' : 'none';
     pageN.style.display = currentPage === 'notes' ? 'block' : 'none';
     pageF.style.display = currentPage === 'finance' ? 'block' : 'none';
+    pageM.style.display = currentPage === 'mandala' ? 'block' : 'none';
+    if (currentPage === 'mandala') { const ae = document.activeElement; if (!(ae && pageM.contains(ae) && (ae.isContentEditable || ae.tagName === 'INPUT'))) renderMandala(); }
     pageX.style.display = currentPage === 'xls' ? 'block' : 'none';
     if (currentPage !== 'xls') pageX.dataset.fileId = '';
     if (currentPage === 'finance') renderFinance();
@@ -2309,7 +2594,7 @@
   }
   applyTheme((() => { try { return localStorage.getItem('tgr_theme'); } catch (e) { return null; } })());
 
-  const APP_VERSION = '17';
+  const APP_VERSION = '18';
   async function checkForUpdates(btn, msg) {
     btn.disabled = true; btn.textContent = 'Checking...';
     try {
