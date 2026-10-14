@@ -231,9 +231,52 @@
   .n-title::placeholder { color: var(--text-dim); opacity: .6; }
   .n-meta { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-dim); margin: 2px 0 16px; }
   .n-meta em { font-style: normal; }
-  .n-body { width: 100%; min-height: 260px; resize: none; background: none; border: none; outline: none; color: var(--text);
-    font-family: inherit; font-size: 16px; line-height: 1.6; padding: 0; overflow: hidden; }
-  .n-body::placeholder { color: var(--text-dim); opacity: .7; }
+  #page-notes { position: relative; }
+  .n-tools { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+  .n-photo-btn { display: inline-flex; align-items: center; gap: 7px; }
+  .n-photo-btn svg { flex-shrink: 0; }
+  .n-body { position: relative; display: flow-root; min-height: 260px; padding: 0 0 72px; outline: none; color: var(--text); cursor: text;
+    font-family: inherit; font-size: 16px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; -webkit-tap-highlight-color: transparent; }
+  .n-body.empty::before { content: attr(data-ph); position: absolute; left: 0; top: 0; color: var(--text-dim); opacity: .7; pointer-events: none; }
+  .n-img { display: block; position: relative; clear: both; line-height: 0; cursor: grab; border-radius: 10px; max-width: 100%;
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+  .n-img.fl { float: left; clear: none; }
+  .n-img.fr { float: right; clear: none; }
+  .n-img img { display: block; width: 100%; height: auto; border-radius: 10px; pointer-events: none;
+    user-select: none; -webkit-user-select: none; -webkit-user-drag: none; -webkit-touch-callout: none; }
+  .n-img.loading, .n-img.missing { background: color-mix(in srgb, var(--text) 7%, transparent); }
+  .n-img.missing img { visibility: hidden; }
+  .n-img.missing::after { content: 'Photo is not downloaded yet'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    padding: 6px; font-size: 12px; line-height: 1.3; text-align: center; color: var(--text-dim); }
+  .n-img.sel { touch-action: none; }
+  .n-img.ghosted { opacity: .28; pointer-events: none; }
+  .n-sel { position: absolute; z-index: 6; pointer-events: none; border: 2px solid var(--accent); border-radius: 12px; }
+  .n-h { position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid var(--accent);
+    box-shadow: 0 1px 4px rgba(0,0,0,.35); pointer-events: auto; touch-action: none; }
+  .n-h::after { content: ''; position: absolute; inset: -12px; border-radius: 50%; }
+  .n-h.tl { left: -9px; top: -9px; cursor: nwse-resize; }
+  .n-h.tr { right: -9px; top: -9px; cursor: nesw-resize; }
+  .n-h.bl { left: -9px; bottom: -9px; cursor: nesw-resize; }
+  .n-h.br { right: -9px; bottom: -9px; cursor: nwse-resize; }
+  .n-tb { position: absolute; left: 0; top: 10px; display: flex; align-items: center; gap: 2px; padding: 4px;
+    border-radius: 11px; background: rgba(22,23,27,.9); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 6px 18px rgba(0,0,0,.32);
+    pointer-events: auto; white-space: nowrap; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+  .n-tb.out { top: auto; bottom: -50px; }
+  .n-tb button { width: 36px; height: 34px; border: none; background: none; color: #d9dbe0; border-radius: 8px; padding: 0; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; }
+  .n-tb button:hover { background: rgba(255,255,255,.12); color: #fff; }
+  .n-tb button.on { background: rgba(255,255,255,.2); color: #fff; }
+  .n-tb button.danger { color: #ff7b7b; }
+  .n-tb i { width: 1px; align-self: stretch; margin: 6px 3px; background: rgba(255,255,255,.18); }
+  .n-size { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 5px 10px; border-radius: 8px;
+    background: rgba(22,23,27,.88); color: #fff; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; pointer-events: none; }
+  .n-ghost { position: fixed; left: 0; top: 0; z-index: 2000; pointer-events: none; border-radius: 8px; opacity: .92;
+    box-shadow: 0 14px 34px rgba(0,0,0,.38); object-fit: cover; background: var(--bg-elevated); }
+  .n-drop { position: fixed; z-index: 1999; pointer-events: none; border: 2px dashed var(--accent); border-radius: 10px;
+    background: color-mix(in srgb, var(--accent) 14%, transparent); }
+  .n-fcaret { position: fixed; z-index: 1999; height: 3px; border-radius: 2px; background: var(--accent); pointer-events: none; }
+  body.n-dragging, body.n-dragging * { cursor: grabbing !important; user-select: none !important; -webkit-user-select: none !important; }
+  @media (max-width: 520px) { .n-photo-btn span { display: none; } .n-photo-btn { padding: 9px 11px; } }
   #n-menu { position: fixed; z-index: 1000; background: var(--popover-bg); border: 1px solid rgba(255,255,255,.1); border-radius: 10px;
     padding: 5px; display: none; flex-direction: column; min-width: 160px; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
   #n-menu.open { display: flex; }
@@ -656,14 +699,19 @@
     walk(f.id);
     const inside = notes.filter(n => fids.includes(n.folderId));
     if (!confirm('Delete folder "' + f.name + '"' + (inside.length ? ' and ' + inside.length + ' notes inside' : '') + '?')) return;
+    const nids = inside.map(n => n.id);
+    if (edState && nids.includes(edState.noteId)) edState.dead = true;
     inside.forEach(n => notesCol.doc(n.id).delete());
     fids.forEach(id => nFoldersCol.doc(id).delete());
     if (inside.some(n => n.id === nState.noteId)) nState.noteId = null;
+    if (nids.length) gcPhotos(new Set(nids), nids, '', null);
   }
   function deleteNote(n) {
     if (!confirm('Delete note "' + (n.title || 'Untitled') + '"?')) return;
+    if (edState && edState.noteId === n.id) edState.dead = true;
     notesCol.doc(n.id).delete();
     if (nState.noteId === n.id) { nState.noteId = null; renderAll(); }
+    gcPhotos(new Set([n.id]), [n.id], '', null);
   }
   function folderForm(parentId, indent) {
     const r = el('div', 'inline-form-row'); r.style.paddingLeft = indent + 'px';
@@ -708,7 +756,7 @@
   }
   function goNote(id) { currentPage = 'notes'; nState.noteId = id; renderAll(); autoCollapseOnMobile(); }
 
-  let focusTitle = false, saveTimer = null;
+  let focusTitle = false, saveTimer = null, pendingSave = null;
   const pageN = document.createElement('div'); pageN.id = 'page-notes'; pageN.className = 'page-wrap'; pageN.style.display = 'none';
   contentEl.appendChild(pageN);
   function notePath(n) {
@@ -721,8 +769,309 @@
     const t = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
     return dayStr(d) === dayStr(now) ? 'today, ' + t : fmtDay(dayStr(d)) + ', ' + t;
   }
+
+  // ================= note body: text + photos =================
+  // note.html  - clean html: <div>, <br>, b/i/u/s and <img data-id data-w data-x data-r> photo tokens
+  // note.body  - the same text without photos (levels, older app versions)
+  // note.hbh   - hash of body: if an older app version edits the text, the note is rebuilt from it
+  // Photos are stored like Excel files: a doc in "files" (scope nimg), the bytes in IndexedDB and in files/ of the data repo.
+  // Width (w) and left offset (x) are in % of the note width, r = height / width.
+  const NIMG = 'nimg';
+  const IMG_EXT = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif', 'image/webp': '.webp' };
+  const BLOCK_TAGS = new Set(['DIV', 'P', 'LI', 'UL', 'OL', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'PRE', 'TABLE', 'TBODY', 'THEAD', 'TR', 'SECTION', 'ARTICLE', 'HEADER', 'FOOTER', 'FIGURE']);
+  const DROP_TAGS = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'HEAD', 'META', 'LINK', 'TEMPLATE', 'NOSCRIPT', 'TITLE', 'SVG', 'MATH', 'CANVAS', 'VIDEO', 'AUDIO', 'INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'FORM']);
+  const FMT_TAGS = { B: 'b', STRONG: 'b', I: 'i', EM: 'i', U: 'u', S: 's', STRIKE: 's', DEL: 's' };
+  const ID_RE = /^[a-z0-9]{6,40}$/;
+  const clampN = (v, a, b) => Math.max(a, Math.min(b, v));
+  const r1 = v => Math.round(v * 10) / 10;
+  const isPicFile = f => /^image\//.test(f.type || '') || /\.(jpe?g|png|gif|webp|heic|heif|bmp|avif)$/i.test(f.name || '');
+  function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); }
+  const NI = {
+    photo: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="8.5" cy="9.5" r="1.7"/><path d="M21 15.5L16 10.5L6 20"/></svg>',
+    left: '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2.5" y="3.5" width="7" height="7" rx="1.4" fill="currentColor" fill-opacity=".3"/><path d="M12.5 5H17.5M12.5 9H17.5M2.5 14H17.5M2.5 17H12"/></svg>',
+    center: '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="6.5" y="3.5" width="7" height="7" rx="1.4" fill="currentColor" fill-opacity=".3"/><path d="M2.5 14H17.5M2.5 17H12"/></svg>',
+    right: '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="10.5" y="3.5" width="7" height="7" rx="1.4" fill="currentColor" fill-opacity=".3"/><path d="M2.5 5H7.5M2.5 9H7.5M2.5 14H17.5M2.5 17H12"/></svg>',
+    trash: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4H13M6.5 4V2.7C6.5 2.3 6.8 2 7.2 2H8.8C9.2 2 9.5 2.3 9.5 2.7V4M5 4V12.5C5 13 5.4 13.4 5.9 13.4H10.1C10.6 13.4 11 13 11 12.5V4"/></svg>'
+  };
+
+  let edState = null;                       // the open note editor
+  let selImg = null, imgOp = null, suppressClick = 0, asRaf = 0, photoRange = null;
+  const selBox = el('div', 'n-sel');
+  const fileCaret = el('div', 'n-fcaret');
+  const imgURLs = new Map(), imgPending = new Map(), imgTried = new Map();
+
+  function photoToast(t) { toastQueue.push({ html: '<div><small>Photos</small><b>' + esc(t) + '</b></div>', open: () => {} }); showNextToast(); }
+
+  // ---------- photo bytes ----------
+  function imgURL(id) {
+    if (imgURLs.has(id)) return Promise.resolve(imgURLs.get(id));
+    if (imgPending.has(id)) return imgPending.get(id);
+    const p = (async () => {
+      const meta = files.find(f => f.id === id);
+      let buf = await idbGet(id);
+      if (!buf) {
+        const cfg = ghCfg();
+        if (!meta || !meta.uploaded || !cfg || !navigator.onLine) return null;
+        buf = await ghGet(cfg, filePath(meta));
+        idbPut(id, buf).catch(() => {});
+      }
+      const url = URL.createObjectURL(new Blob([buf], { type: (meta && meta.mime) || 'image/jpeg' }));
+      imgURLs.set(id, url);
+      return url;
+    })().catch(() => null).finally(() => imgPending.delete(id));
+    imgPending.set(id, p);
+    return p;
+  }
+  function loadImgInto(s) {
+    const id = s.getAttribute('data-id'), im = s.firstChild;
+    if (imgURLs.has(id)) { if (im.getAttribute('src') !== imgURLs.get(id)) im.src = imgURLs.get(id); s.classList.remove('loading', 'missing'); return; }
+    s.classList.add('loading'); imgTried.set(id, Date.now());
+    imgURL(id).then(url => {
+      s.classList.remove('loading');
+      if (url) { im.src = url; s.classList.remove('missing'); } else s.classList.add('missing');
+    });
+  }
+  function retryMissing() {
+    if (!edState) return;
+    edState.ed.querySelectorAll('.n-img.missing').forEach(s => {
+      const id = s.getAttribute('data-id'), meta = files.find(f => f.id === id);
+      if (imgURLs.has(id) || (meta && meta.uploaded && navigator.onLine && Date.now() - (imgTried.get(id) || 0) > 8000)) loadImgInto(s);
+    });
+  }
+  window.addEventListener('online', () => setTimeout(retryMissing, 1500));
+
+  // make a phone photo light enough to sync: max 2048px, jpeg (png if it has transparency)
+  async function prepImage(file) {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('decode')); i.src = url; });
+      const w = img.naturalWidth, h = img.naturalHeight;
+      if (!w || !h) throw new Error('decode');
+      const type = (file.type || '').toLowerCase();
+      if (IMG_EXT[type] && file.size <= 1.5 * 1024 * 1024 && Math.max(w, h) <= 2560) return { buf: await file.arrayBuffer(), mime: type, ext: IMG_EXT[type], w, h };
+      const k = Math.min(1, 2048 / Math.max(w, h)), cw = Math.max(1, Math.round(w * k)), ch = Math.max(1, Math.round(h * k));
+      let alpha = false;
+      if (/png|webp|gif|avif/.test(type)) {
+        const t = document.createElement('canvas'); t.width = t.height = 40;
+        const tc = t.getContext('2d'); tc.drawImage(img, 0, 0, 40, 40);
+        const d = tc.getImageData(0, 0, 40, 40).data;
+        for (let i = 3; i < d.length; i += 4) if (d[i] < 250) { alpha = true; break; }
+      }
+      const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+      const ctx = c.getContext('2d');
+      if (!alpha) { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cw, ch); }
+      ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, cw, ch);
+      const mime = alpha ? 'image/png' : 'image/jpeg';
+      const blob = await new Promise(res => c.toBlob(res, mime, 0.86));
+      if (!blob) throw new Error('encode');
+      return { buf: await blob.arrayBuffer(), mime, ext: IMG_EXT[mime], w: cw, h: ch };
+    } finally { URL.revokeObjectURL(url); }
+  }
+
+  // ---------- photo nodes ----------
+  function imgAttrs(n) {
+    const num = (k, d) => { const v = parseFloat(n.getAttribute(k)); return isFinite(v) ? v : d; };
+    const w = clampN(num('data-w', 100), 5, 100);
+    return { id: String(n.getAttribute('data-id') || ''), w, x: clampN(num('data-x', (100 - w) / 2), 0, 100 - w), r: clampN(num('data-r', 0.75), 0.05, 20) };
+  }
+  // photos on the side (and not too wide) get the text around them, centred or wide ones sit on their own line
+  function imgMode(w, x) { if (w > 70) return 'b'; const c = x + w / 2; return c < 38 ? 'l' : c > 62 ? 'r' : 'b'; }
+  function setImgAttrs(s, a) {
+    const w = clampN(+a.w, 5, 100), x = clampN(+a.x, 0, 100 - w);
+    s.setAttribute('data-w', r1(w)); s.setAttribute('data-x', r1(x)); s.setAttribute('data-r', clampN(+a.r, 0.05, 20).toFixed(4));
+    const b = imgAttrs(s), m = imgMode(b.w, b.x);
+    s.classList.toggle('fl', m === 'l'); s.classList.toggle('fr', m === 'r');
+    s.style.width = b.w + '%';
+    s.style.margin = m === 'l' ? '4px 16px 8px ' + b.x + '%' : m === 'r' ? '4px ' + Math.max(0, r1(100 - b.x - b.w)) + '% 8px 16px' : '8px 0 8px ' + b.x + '%';
+    s.firstChild.style.aspectRatio = String(+(1 / b.r).toFixed(4));
+  }
+  function makeImgNode(a) {
+    const s = document.createElement('span');
+    s.className = 'n-img'; s.contentEditable = 'false'; s.setAttribute('data-id', a.id);
+    const im = document.createElement('img'); im.alt = ''; im.draggable = false;
+    s.appendChild(im);
+    setImgAttrs(s, a);
+    loadImgInto(s);
+    return s;
+  }
+  function closestImg(n) {
+    const ed = edState && edState.ed;
+    while (n && n !== ed) { if (n.nodeType === 1 && n.classList.contains('n-img')) return n; n = n.parentNode; }
+    return null;
+  }
+
+  // ---------- html in / out ----------
+  function buildBody(html, onlyKnown) {
+    const frag = document.createDocumentFragment();
+    if (!html) return frag;
+    let doc;
+    try { doc = new DOMParser().parseFromString('<!doctype html><html><body>' + html + '</body></html>', 'text/html'); } catch (e) { return frag; }
+    const walk = (src, dst) => {
+      [...src.childNodes].forEach(c => {
+        if (c.nodeType === 3) { dst.appendChild(document.createTextNode(c.nodeValue)); return; }
+        if (c.nodeType !== 1) return;
+        const t = c.tagName.toUpperCase();
+        if (DROP_TAGS.has(t)) return;
+        if (c.hasAttribute('data-id') && (t === 'IMG' || c.classList.contains('n-img'))) {
+          const a = imgAttrs(c);
+          if (ID_RE.test(a.id) && (!onlyKnown || files.some(f => f.id === a.id && f.scope === NIMG))) dst.appendChild(makeImgNode(a));
+          return;
+        }
+        if (t === 'IMG') return;
+        if (t === 'BR') { dst.appendChild(document.createElement('br')); return; }
+        if (BLOCK_TAGS.has(t)) { const d = document.createElement('div'); walk(c, d); dst.appendChild(d); return; }
+        if (FMT_TAGS[t]) { const f = document.createElement(FMT_TAGS[t]); walk(c, f); dst.appendChild(f); return; }
+        walk(c, dst);
+      });
+    };
+    walk(doc.body, frag);
+    return frag;
+  }
+  function serializeBody(root) {
+    let out = '';
+    const walk = node => {
+      node.childNodes.forEach(c => {
+        if (c.nodeType === 3) { out += esc(c.nodeValue); return; }
+        if (c.nodeType !== 1) return;
+        if (c.classList.contains('n-img')) {
+          const a = imgAttrs(c);
+          if (ID_RE.test(a.id)) out += '<img data-id="' + a.id + '" data-w="' + r1(a.w) + '" data-x="' + r1(a.x) + '" data-r="' + a.r.toFixed(4) + '">';
+          return;
+        }
+        const t = c.tagName;
+        if (t === 'BR') { out += '<br>'; return; }
+        if (DROP_TAGS.has(t)) return;
+        if (BLOCK_TAGS.has(t)) { out += '<div>'; walk(c); out += '</div>'; return; }
+        const f = FMT_TAGS[t];
+        if (f) { out += '<' + f + '>'; walk(c); out += '</' + f + '>'; return; }
+        walk(c);
+      });
+    };
+    walk(root);
+    return out;
+  }
+  function textOf(root) {
+    let out = '';
+    const walk = node => {
+      node.childNodes.forEach(c => {
+        if (c.nodeType === 3) { out += c.nodeValue; return; }
+        if (c.nodeType !== 1 || c.classList.contains('n-img') || DROP_TAGS.has(c.tagName)) return;
+        if (c.tagName === 'BR') { out += '\n'; return; }
+        const blk = BLOCK_TAGS.has(c.tagName);
+        if (blk && out && !out.endsWith('\n')) out += '\n';
+        walk(c);
+        if (blk && out && !out.endsWith('\n')) out += '\n';
+      });
+    };
+    walk(root);
+    return out.replace(/\n$/, '');
+  }
+  const textToHtml = t => String(t || '').split('\n').map(l => '<div>' + (l ? esc(l) : '<br>') + '</div>').join('');
+  function noteHtml(n) {
+    const body = n.body || '';
+    if (typeof n.html === 'string' && n.hbh === hashStr(body)) return n.html;
+    let html = body ? textToHtml(body) : '';
+    const imgs = typeof n.html === 'string' ? n.html.match(/<img [^>]*>/g) : null;   // keep the photos if an older app version edited the text
+    if (imgs && imgs.length) html += '<div>' + imgs.join('') + '</div>';
+    return html;
+  }
+
+  // ---------- saving, history ----------
+  function noteSave(now) {
+    const st = edState; if (!st) return;
+    st.status.textContent = 'Saving...';
+    clearTimeout(saveTimer);
+    pendingSave = () => {
+      saveTimer = null; pendingSave = null;
+      if (st.dead) return;
+      const text = textOf(st.ed), html = serializeBody(st.ed);
+      st.loadedHtml = html;
+      notesCol.doc(st.noteId).update({ title: st.ti.value, body: text, html, hbh: hashStr(text), updatedAt: Date.now() }).catch(() => {});
+      if (st.status.isConnected) st.status.textContent = 'Saved';
+    };
+    if (now) pendingSave(); else saveTimer = setTimeout(pendingSave, 500);
+  }
+  function flushSave() { if (pendingSave) { clearTimeout(saveTimer); pendingSave(); } }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushSave(); });
+  window.addEventListener('pagehide', flushSave);
+  function updateEmpty() { const ed = edState.ed; ed.classList.toggle('empty', !ed.textContent.replace(/[\s​]/g, '') && !ed.querySelector('.n-img')); }
+  function contentChanged(hist) {
+    if (!edState) return;
+    updateEmpty(); noteSave();
+    if (hist) pushHist(); else histSchedule();
+    positionSel();
+  }
+  function setEditorHtml(html) {
+    const st = edState, sc = contentEl.scrollTop;
+    deselectImg();
+    st.ed.innerHTML = '';
+    st.ed.appendChild(buildBody(html));
+    st.loadedHtml = html;
+    updateEmpty();
+    contentEl.scrollTop = sc;
+  }
+  function getCaretOffset() {
+    const st = edState, s = window.getSelection();
+    if (!s || !s.rangeCount || !st.ed.contains(s.anchorNode)) return null;
+    const r = s.getRangeAt(0), pre = document.createRange();
+    pre.selectNodeContents(st.ed);
+    try { pre.setEnd(r.startContainer, r.startOffset); } catch (e) { return null; }
+    return pre.toString().length;
+  }
+  function setCaretOffset(off) {
+    const ed = edState.ed;
+    if (off == null || document.activeElement !== ed) return;
+    const tw = document.createTreeWalker(ed, NodeFilter.SHOW_TEXT);
+    let n, left = off, last = null;
+    while ((n = tw.nextNode())) { last = n; if (left <= n.nodeValue.length) break; left -= n.nodeValue.length; }
+    const r = document.createRange();
+    if (n) r.setStart(n, left); else if (last) r.setStart(last, last.nodeValue.length); else r.setStart(ed, 0);
+    r.collapse(true);
+    const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+  }
+  // own undo/redo: photo moves are not something the browser can undo
+  function pushHist() {
+    const st = edState; if (!st) return;
+    clearTimeout(st.histTimer); st.histTimer = null;
+    const h = { html: serializeBody(st.ed), caret: getCaretOffset() };
+    if (st.hi >= 0 && st.hist[st.hi].html === h.html) { st.hist[st.hi].caret = h.caret; return; }
+    st.hist.length = st.hi + 1; st.hist.push(h);
+    if (st.hist.length > 150) st.hist.shift();
+    st.hi = st.hist.length - 1;
+  }
+  function histSchedule() { const st = edState; clearTimeout(st.histTimer); st.histTimer = setTimeout(() => { if (edState === st) pushHist(); }, 700); }
+  function histFlush() { if (edState && edState.histTimer) pushHist(); }
+  function restoreHist(h) { setEditorHtml(h.html); edState.loadedHtml = ''; setCaretOffset(h.caret); noteSave(); }
+  function noteUndo() { const st = edState; if (!st) return; histFlush(); if (st.hi <= 0) return; st.hi--; restoreHist(st.hist[st.hi]); }
+  function noteRedo() { const st = edState; if (!st) return; histFlush(); if (st.hi >= st.hist.length - 1) return; st.hi++; restoreHist(st.hist[st.hi]); }
+
+  // photos that are no longer in any note are deleted when you leave the note (or delete it)
+  function gcPhotos(noteIds, skipNotes, extraHtml, fresh) {
+    const used = new Set(), grab = h => { String(h || '').replace(/data-id="([a-z0-9]+)"/g, (m, id) => { used.add(id); return m; }); };
+    notes.forEach(n => { if (!skipNotes.includes(n.id)) grab(n.html); });
+    grab(extraHtml);
+    const old = Date.now() - 120000;
+    files.filter(f => f.scope === NIMG && noteIds.has(f.noteId) && !used.has(f.id) && (!fresh || fresh.has(f.id) || (f.createdAt || 0) < old)).forEach(f => {
+      deleteFile(f, false);
+      const u = imgURLs.get(f.id); if (u) { URL.revokeObjectURL(u); imgURLs.delete(f.id); }
+    });
+  }
+  function closeEditor() {
+    const st = edState; if (!st) return;
+    flushSave();
+    if (imgOp && imgOp.type === 'drag') finishDrag(true, true);
+    deselectImg(); fileCaret.remove();
+    if (st.ro) st.ro.disconnect();
+    clearTimeout(st.histTimer);
+    edState = null;
+    if (!st.dead) gcPhotos(new Set([st.noteId]), [st.noteId], st.loadedHtml, st.added);
+  }
+
+  // ---------- page ----------
   function renderNote() {
     const n = notes.find(x => x.id === nState.noteId);
+    if (edState && (!n || edState.noteId !== n.id)) closeEditor();
     if (!n) {
       pageN.dataset.noteId = '';
       pageN.innerHTML = '';
@@ -733,43 +1082,519 @@
       pageN.appendChild(e);
       return;
     }
-    if (pageN.dataset.noteId === n.id && pageN.querySelector('.n-body')) {
+    if (edState && pageN.dataset.noteId === n.id && edState.ed.isConnected) {
       // same note already open: update only what the user is not editing
-      const ti = pageN.querySelector('.n-title'), bo = pageN.querySelector('.n-body');
-      if (document.activeElement !== ti && ti.value !== (n.title || '')) ti.value = n.title || '';
-      if (document.activeElement !== bo && bo.value !== (n.body || '')) { bo.value = n.body || ''; grow(bo); }
-      if (!saveTimer) pageN.querySelector('.n-meta span').textContent = 'Edited ' + fmtEdited(n.updatedAt || n.createdAt);
+      const st = edState;
+      if (!saveTimer && document.activeElement !== st.ti && st.ti.value !== (n.title || '')) st.ti.value = n.title || '';
+      if (!saveTimer && !imgOp && document.activeElement !== st.ed) {
+        const html = noteHtml(n);
+        if (html !== st.loadedHtml) { setEditorHtml(html); pushHist(); }
+      }
+      retryMissing();
+      if (!saveTimer) st.status.textContent = 'Edited ' + fmtEdited(n.updatedAt || n.createdAt);
       return;
     }
     pageN.dataset.noteId = n.id;
     pageN.innerHTML = '';
     const head = el('div', 'n-head');
     const ti = el('input', 'n-title'); ti.placeholder = 'Untitled'; ti.value = n.title || ''; ti.maxLength = 120;
+    const tools = el('div', 'n-tools');
+    const ph = el('button', 'x-btn n-photo-btn', NI.photo + '<span>Photo</span>'); ph.title = 'Add photo'; ph.setAttribute('aria-label', 'Add photo');
+    ph.addEventListener('mousedown', e => e.preventDefault());
+    ph.addEventListener('click', () => pickNotePhotos());
     const del = el('button', 'x-btn ghost-danger'); del.textContent = 'Delete';
-    del.addEventListener('click', () => deleteNote(n));
-    head.appendChild(ti); head.appendChild(del);
+    del.addEventListener('click', () => deleteNote(notes.find(x => x.id === n.id) || n));
+    tools.appendChild(ph); tools.appendChild(del);
+    head.appendChild(ti); head.appendChild(tools);
     const meta = el('div', 'n-meta');
     const path = notePath(n).map(f => esc(f.name)).join(' / ');
     meta.innerHTML = (path ? '<em>' + path + '</em>' : '') + '<span>Edited ' + fmtEdited(n.updatedAt || n.createdAt) + '</span>';
-    const bo = el('textarea', 'n-body'); bo.placeholder = 'Start writing...'; bo.value = n.body || '';
-    pageN.appendChild(head); pageN.appendChild(meta); pageN.appendChild(bo);
-    const status = meta.querySelector('span');
-    const save = () => {
-      status.textContent = 'Saving...';
-      clearTimeout(saveTimer);
-      saveTimer = setTimeout(() => {
-        saveTimer = null;
-        notesCol.doc(n.id).update({ title: ti.value, body: bo.value, updatedAt: Date.now() });
-        status.textContent = 'Saved';
-      }, 500);
-    };
-    ti.addEventListener('input', save);
-    bo.addEventListener('input', () => { grow(bo); save(); });
-    ti.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); bo.focus(); } });
-    requestAnimationFrame(() => grow(bo));
+    const ed = el('div', 'n-body'); ed.contentEditable = 'true'; ed.spellcheck = true; ed.dataset.ph = 'Start writing...';
+    ed.setAttribute('role', 'textbox'); ed.setAttribute('aria-multiline', 'true');
+    pageN.appendChild(head); pageN.appendChild(meta); pageN.appendChild(ed);
+    const st = edState = { noteId: n.id, ed, ti, status: meta.querySelector('span'), loadedHtml: '', hist: [], hi: -1, histTimer: null,
+      lastRange: null, added: new Set(), dead: false, innerDrag: false, ro: null };
+    setEditorHtml(noteHtml(n));
+    pushHist();
+    ed.addEventListener('input', () => { if (edState === st) contentChanged(false); });
+    ed.addEventListener('beforeinput', e => {
+      if (e.inputType === 'historyUndo') { e.preventDefault(); noteUndo(); }
+      else if (e.inputType === 'historyRedo') { e.preventDefault(); noteRedo(); }
+    });
+    ed.addEventListener('paste', onNotePaste);
+    ed.addEventListener('mousedown', onImgMouseDown);
+    ed.addEventListener('touchstart', onImgTouchStart, { passive: true });
+    ed.addEventListener('touchmove', e => { if (touchT && touchT.armed && e.cancelable) e.preventDefault(); }, { passive: false });
+    ed.addEventListener('dragstart', e => { if (closestImg(e.target)) { e.preventDefault(); return; } st.innerDrag = true; });
+    ed.addEventListener('dragend', () => { st.innerDrag = false; });
+    ed.addEventListener('dragover', onEdDragOver);
+    ed.addEventListener('dragleave', () => fileCaret.remove());
+    ed.addEventListener('drop', onEdDrop);
+    if (window.ResizeObserver) { st.ro = new ResizeObserver(() => positionSel()); st.ro.observe(ed); }
+    ti.addEventListener('input', () => noteSave());
+    ti.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); ed.focus(); } });
     if (focusTitle) { focusTitle = false; setTimeout(() => ti.focus(), 30); }
   }
-  function grow(t) { t.style.height = 'auto'; t.style.height = Math.max(260, t.scrollHeight + 4) + 'px'; }
+
+  // ---------- adding photos ----------
+  const photoInput = el('input'); photoInput.type = 'file'; photoInput.accept = 'image/*'; photoInput.multiple = true; photoInput.style.display = 'none';
+  document.body.appendChild(photoInput);
+  photoInput.addEventListener('change', () => { const fl = [...(photoInput.files || [])]; photoInput.value = ''; if (fl.length && edState) insertPhotos(fl, photoRange); });
+  function curRange() {
+    const st = edState; if (!st) return null;
+    if (selImg) { const r = document.createRange(); r.setStartAfter(selImg); r.collapse(true); return r; }
+    const s = window.getSelection();
+    if (s && s.rangeCount && st.ed.contains(s.getRangeAt(0).startContainer)) return s.getRangeAt(0).cloneRange();
+    return st.lastRange && st.ed.contains(st.lastRange.startContainer) ? st.lastRange.cloneRange() : null;
+  }
+  function pickNotePhotos() { if (!edState) return; photoRange = curRange(); photoInput.click(); }
+  function placeNode(node, range) {
+    const ed = edState.ed;
+    if (range && (range.startContainer === ed || ed.contains(range.startContainer))) {
+      const rg = range.cloneRange(); rg.collapse(false);
+      const inside = closestImg(rg.startContainer);
+      if (inside) { rg.setStartAfter(inside); rg.collapse(true); }
+      rg.insertNode(node);
+      return;
+    }
+    const d = document.createElement('div'); d.appendChild(node); ed.appendChild(d);
+  }
+  // keep a line after a photo at the very end, so there is a place to keep writing
+  function ensureLineAfter(node) {
+    const ed = edState.ed;
+    for (let n = node; n && n !== ed; n = n.parentNode) {
+      let sib = n.nextSibling;
+      while (sib && sib.nodeType === 3 && !sib.nodeValue.length) sib = sib.nextSibling;
+      if (sib) return;
+    }
+    const d = document.createElement('div'); d.appendChild(document.createElement('br')); ed.appendChild(d);
+  }
+  function tidyAfterRemove(parent) {
+    const ed = edState.ed;
+    if (!parent || parent === ed || !parent.isConnected || parent.childNodes.length || !BLOCK_TAGS.has(parent.tagName)) return;
+    if (ed.childNodes.length > 1) parent.remove(); else parent.appendChild(document.createElement('br'));
+  }
+  async function insertPhotos(list, range) {
+    const st = edState; if (!st) return;
+    const pics = list.filter(isPicFile);
+    if (!pics.length) { photoToast('Only photos and pictures can go into a note'); return; }
+    histFlush();
+    let prev = null, bad = null;
+    for (const f of pics) {
+      let p;
+      try { p = await prepImage(f); } catch (e) { bad = bad || f.name || 'photo'; continue; }
+      if (edState !== st) return;
+      const base = (f.name || 'photo').replace(/\.[^.]+$/, '').slice(0, 60) || 'photo';
+      const r = await filesCol.add({ name: base + p.ext, ext: p.ext, mime: p.mime, size: p.buf.byteLength, scope: NIMG, noteId: st.noteId,
+        folderId: null, w: p.w, h: p.h, createdAt: Date.now(), uploaded: false });
+      imgURLs.set(r.id, URL.createObjectURL(new Blob([p.buf], { type: p.mime })));
+      try { await idbPut(r.id, p.buf); } catch (e) {}
+      st.added.add(r.id);
+      if (edState !== st) return;
+      const ew = st.ed.clientWidth || 600, ratio = p.h / p.w;
+      const px = Math.min(ew, p.w, Math.max(160, 440 / ratio));
+      const w = clampN(Math.round(px / ew * 100), 10, 100);
+      const node = makeImgNode({ id: r.id, w, x: (100 - w) / 2, r: ratio });
+      if (prev) prev.after(node); else placeNode(node, range);
+      prev = node;
+    }
+    if (bad) photoToast("Couldn't read " + bad);
+    if (!prev) return;
+    ensureLineAfter(prev);
+    pumpUploads();
+    selectImg(prev);
+    contentChanged(true);
+    try { prev.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {}
+  }
+  function insertFragment(frag) {
+    const st = edState, ed = st.ed, s = window.getSelection();
+    histFlush();
+    let rg = s && s.rangeCount && ed.contains(s.getRangeAt(0).startContainer) ? s.getRangeAt(0) : curRange();
+    if (!rg) { rg = document.createRange(); rg.selectNodeContents(ed); rg.collapse(false); }
+    rg.deleteContents();
+    const last = frag.lastChild, ids = [...frag.querySelectorAll('.n-img')].map(x => x.getAttribute('data-id'));
+    rg.insertNode(frag);
+    if (last && last.isConnected) { const r2 = document.createRange(); r2.setStartAfter(last); r2.collapse(true); s.removeAllRanges(); s.addRange(r2); }
+    ids.forEach(id => { const f = files.find(x => x.id === id); if (f && f.noteId !== st.noteId) filesCol.doc(id).update({ noteId: st.noteId }); });
+    contentChanged(true);
+  }
+  function onNotePaste(e) {
+    const st = edState, cd = e.clipboardData; if (!st || !cd) return;
+    const pics = [...(cd.files || [])].filter(isPicFile);
+    if (pics.length) { e.preventDefault(); insertPhotos(pics, curRange()); return; }
+    const html = cd.getData('text/html');
+    if (html && /data-id="?[a-z0-9]{6,40}/.test(html)) {
+      const frag = buildBody(html, true);
+      if (frag.querySelector('.n-img')) { e.preventDefault(); insertFragment(frag); return; }
+    }
+    // everything else goes in as plain text (no styles from websites)
+    const text = cd.getData('text/plain');
+    e.preventDefault();
+    if (text) document.execCommand('insertText', false, text);
+  }
+  document.addEventListener('paste', e => {
+    if (!edState || currentPage !== 'notes' || edState.ed.contains(e.target) || isField(document.activeElement)) return;
+    const pics = [...((e.clipboardData && e.clipboardData.files) || [])].filter(isPicFile);
+    if (pics.length) { e.preventDefault(); insertPhotos(pics, curRange()); }
+  });
+
+  // ---------- drag files / text in from outside ----------
+  function dragHasImages(e) {
+    const dt = e.dataTransfer; if (!dt) return false;
+    const items = [...(dt.items || [])];
+    if (items.length) return items.some(it => it.kind === 'file' && /^image\//.test(it.type));
+    return [...(dt.types || [])].includes('Files');
+  }
+  function caretPos(x, y) {
+    if (document.caretRangeFromPoint) { const r = document.caretRangeFromPoint(x, y); return r ? { node: r.startContainer, off: r.startOffset } : null; }
+    if (document.caretPositionFromPoint) { const p = document.caretPositionFromPoint(x, y); return p ? { node: p.offsetNode, off: p.offset } : null; }
+    return null;
+  }
+  const inEd = p => p && edState && (p.node === edState.ed || edState.ed.contains(p.node));
+  function posRect(p) {
+    const r = document.createRange();
+    try { r.setStart(p.node, p.off); r.collapse(true); } catch (e) { return null; }
+    const rs = r.getClientRects();
+    let rc = rs.length ? rs[0] : null;
+    if (!rc || (!rc.height && !rc.top)) {
+      let n = p.node.nodeType === 1 ? (p.node.childNodes[p.off] || p.node.childNodes[p.off - 1] || p.node) : p.node.parentNode;
+      if (n && n.nodeType === 3) n = n.parentNode;
+      rc = n && n.getBoundingClientRect ? n.getBoundingClientRect() : null;
+    }
+    return rc;
+  }
+  function onEdDragOver(e) {
+    const st = edState; if (!st || !e.dataTransfer) return;
+    if ([...(e.dataTransfer.types || [])].includes('Files')) {
+      if (!dragHasImages(e)) return;                       // Excel files: the page takes them
+      e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'copy';
+      const er = st.ed.getBoundingClientRect(), slot = lineSlot(e.clientY, true, null);
+      if (!fileCaret.parentNode) document.body.appendChild(fileCaret);
+      Object.assign(fileCaret.style, { left: er.left + 'px', width: er.width + 'px', top: (slot.top - 1.5) + 'px' });
+      return;
+    }
+    if (!st.innerDrag) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }
+  }
+  function onEdDrop(e) {
+    const st = edState, dt = e.dataTransfer; if (!st || !dt) return;
+    fileCaret.remove();
+    const p = caretPos(e.clientX, e.clientY);
+    if ([...(dt.types || [])].includes('Files')) {
+      const pics = [...(dt.files || [])].filter(isPicFile);
+      if (!pics.length) return;
+      e.preventDefault(); e.stopPropagation();
+      insertPhotos(pics, rangeAt(lineSlot(e.clientY, true, null).p));   // between lines, not in the middle of a word
+      return;
+    }
+    if (st.innerDrag) return;                               // moving text inside the note: the browser does it
+    e.preventDefault();
+    const text = dt.getData('text/plain'); if (!text) return;
+    st.ed.focus();
+    if (inEd(p)) { const r = document.createRange(); r.setStart(p.node, p.off); r.collapse(true); const s = window.getSelection(); s.removeAllRanges(); s.addRange(r); }
+    document.execCommand('insertText', false, text);
+  }
+  document.addEventListener('dragend', () => fileCaret.remove());
+  document.addEventListener('drop', () => fileCaret.remove());
+
+  // ---------- selecting a photo ----------
+  function selectImg(s) {
+    if (selImg && selImg !== s) selImg.classList.remove('sel');
+    selImg = s; s.classList.add('sel');
+    buildSelBox();
+    positionSel();
+  }
+  function deselectImg() {
+    if (selImg) selImg.classList.remove('sel');
+    selImg = null;
+    if (selBox.parentNode) selBox.remove();
+  }
+  function buildSelBox() {
+    selBox.innerHTML = '';
+    ['tl', 'tr', 'bl', 'br'].forEach(h => {
+      const k = el('i', 'n-h ' + h);
+      k.addEventListener('mousedown', e => { if (e.button !== 0) return; e.preventDefault(); e.stopPropagation(); beginResize(h, e.clientX, e.clientY, false); });
+      k.addEventListener('touchstart', e => { if (e.cancelable) e.preventDefault(); e.stopPropagation(); const t = e.touches[0]; beginResize(h, t.clientX, t.clientY, true); }, { passive: false });
+      selBox.appendChild(k);
+    });
+    const tb = el('div', 'n-tb');
+    const btn = (k, title, fn, cls) => {
+      const b = el('button', cls || null, NI[k]); b.type = 'button'; b.title = title; b.setAttribute('aria-label', title); b.dataset.k = k;
+      b.addEventListener('mousedown', e => e.preventDefault());
+      b.addEventListener('click', e => { e.stopPropagation(); fn(); });
+      tb.appendChild(b);
+    };
+    btn('left', 'Left, text around it', () => alignImg('l'));
+    btn('center', 'Center', () => alignImg('c'));
+    btn('right', 'Right, text around it', () => alignImg('r'));
+    tb.appendChild(el('i'));
+    btn('trash', 'Delete photo', () => { if (selImg) removeImg(selImg); }, 'danger');
+    selBox.appendChild(tb);
+  }
+  function positionSel() {
+    if (!selImg) return;
+    if (!edState || !selImg.isConnected || !edState.ed.contains(selImg)) { deselectImg(); return; }
+    if (imgOp && imgOp.type === 'drag') { if (selBox.parentNode) selBox.remove(); return; }
+    if (selBox.parentNode !== pageN) pageN.appendChild(selBox);
+    const pr = pageN.getBoundingClientRect(), r = selImg.getBoundingClientRect(), pad = 3;
+    Object.assign(selBox.style, { left: (r.left - pr.left - pad) + 'px', top: (r.top - pr.top - pad) + 'px', width: (r.width + pad * 2) + 'px', height: (r.height + pad * 2) + 'px' });
+    const tb = selBox.querySelector('.n-tb'); if (!tb) return;
+    tb.classList.toggle('out', r.width < 196 || r.height < 96);
+    // keep the toolbar on screen when a small photo sits at the edge
+    const tw = tb.offsetWidth, bw = r.width + pad * 2, boxLeft = r.left - pr.left - pad;
+    tb.style.left = clampN((bw - tw) / 2, -boxLeft, pr.width - boxLeft - tw) + 'px';
+    const a = imgAttrs(selImg), c = Math.abs(a.x - (100 - a.w) / 2) < 0.6;
+    tb.querySelectorAll('button').forEach(b => b.classList.toggle('on',
+      (b.dataset.k === 'center' && c) || (b.dataset.k === 'left' && !c && a.x < 0.6) || (b.dataset.k === 'right' && !c && a.x + a.w > 99.4)));
+  }
+  function alignImg(where) {
+    const s = selImg; if (!s) return;
+    histFlush();
+    const a = imgAttrs(s);
+    setImgAttrs(s, { ...a, x: where === 'l' ? 0 : where === 'r' ? 100 - a.w : (100 - a.w) / 2 });
+    contentChanged(true);
+  }
+  function removeImg(s) {
+    histFlush();
+    const parent = s.parentNode;
+    deselectImg();
+    s.remove();
+    tidyAfterRemove(parent);
+    contentChanged(true);
+  }
+  const isField = a => !!a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT' || (a.isContentEditable && !(edState && a === edState.ed)));
+  document.addEventListener('keydown', e => {
+    const st = edState; if (!st || currentPage !== 'notes') return;
+    const ae = document.activeElement, mod = e.metaKey || e.ctrlKey;
+    if (mod && !e.altKey && (e.code === 'KeyZ' || e.code === 'KeyY') && (ae === st.ed || (selImg && !isField(ae)))) {
+      e.preventDefault();
+      if (e.code === 'KeyY' || e.shiftKey) noteRedo(); else noteUndo();
+      return;
+    }
+    if (!selImg || isField(ae)) return;
+    if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); removeImg(selImg); }
+    else if (e.key === 'Escape' || e.key === 'Enter' || e.key === 'Tab' || e.key.startsWith('Arrow') || (e.key.length === 1 && !mod)) deselectImg();
+  }, true);
+  document.addEventListener('click', e => {
+    if (Date.now() - suppressClick < 350) { e.preventDefault(); e.stopPropagation(); return; }
+    if (selImg && !selImg.contains(e.target) && !selBox.contains(e.target)) deselectImg();
+  }, true);
+  document.addEventListener('selectionchange', () => {
+    if (!edState) return;
+    const s = window.getSelection();
+    if (s && s.rangeCount && edState.ed.contains(s.anchorNode)) edState.lastRange = s.getRangeAt(0).cloneRange();
+  });
+  window.addEventListener('resize', () => positionSel());
+
+  // ---------- mouse / touch on a photo ----------
+  function trackPointer(touch, onMove, onEnd) {
+    const mv = touch ? 'touchmove' : 'mousemove', up = touch ? 'touchend' : 'mouseup';
+    const pos = ev => { const t = touch ? ((ev.touches && ev.touches[0]) || (ev.changedTouches && ev.changedTouches[0])) : ev; return t && t.clientX != null ? [t.clientX, t.clientY] : [null, null]; };
+    const opts = { passive: false, capture: true };
+    const move = ev => { const [x, y] = pos(ev); if (x != null) onMove(x, y, ev); };
+    const done = cancel => ev => {
+      document.removeEventListener(mv, move, opts); document.removeEventListener(up, endOk, true);
+      document.removeEventListener('touchcancel', endCancel, true); window.removeEventListener('blur', endCancel);
+      const [x, y] = pos(ev); onEnd(x, y, ev, cancel);
+    };
+    const endOk = done(false), endCancel = done(true);
+    document.addEventListener(mv, move, opts); document.addEventListener(up, endOk, true);
+    if (touch) document.addEventListener('touchcancel', endCancel, true);
+    window.addEventListener('blur', endCancel);
+  }
+  function onImgMouseDown(e) {
+    const s = closestImg(e.target); if (!s || e.button !== 0) return;
+    e.preventDefault();
+    const x0 = e.clientX, y0 = e.clientY;
+    let dragging = false;
+    trackPointer(false, (x, y) => {
+      if (!dragging && Math.hypot(x - x0, y - y0) > 4) { dragging = true; beginDrag(s, x0, y0); }
+      if (dragging) dragMove(x, y);
+    }, (x, y, ev, cancel) => { if (dragging) finishDrag(cancel, false); else if (!cancel) selectImg(s); });
+  }
+  // phone: tap = select, drag a selected photo = move it, long press on any photo = select and move
+  let touchT = null;   // the touch that started on a photo (the editor's touchmove blocks scrolling once it is armed)
+  function onImgTouchStart(e) {
+    const s = closestImg(e.target); if (!s || e.touches.length !== 1 || imgOp) return;
+    const t0 = e.touches[0];
+    const T = touchT = { x0: t0.clientX, y0: t0.clientY, armed: s === selImg, moved: false, dragging: false, timer: 0 };
+    if (!T.armed) T.timer = setTimeout(() => { if (T.moved || touchT !== T) return; T.armed = true; selectImg(s); if (navigator.vibrate) navigator.vibrate(10); }, 380);
+    trackPointer(true, (x, y, ev) => {
+      const d = Math.hypot(x - T.x0, y - T.y0);
+      if (!T.armed) { if (d > 8) { T.moved = true; clearTimeout(T.timer); } return; }   // the page is scrolling
+      if (ev.cancelable) ev.preventDefault();
+      if (!T.dragging && d > 4) { T.dragging = true; beginDrag(s, T.x0, T.y0, true); }
+      if (T.dragging) dragMove(x, y);
+    }, (x, y, ev, cancel) => {
+      clearTimeout(T.timer);
+      if (touchT === T) touchT = null;
+      if (T.dragging) { if (ev.cancelable) ev.preventDefault(); finishDrag(cancel, true); return; }
+      if (cancel || T.moved) return;
+      if (ev.cancelable) ev.preventDefault();                 // a tap on a photo: no keyboard, no caret
+      selectImg(s);
+    });
+  }
+
+  // ---------- moving a photo ----------
+  function beginDrag(s, x0, y0, touch) {
+    const ir = s.getBoundingClientRect();
+    if (!ir.width) return;
+    if (selBox.parentNode) selBox.remove();
+    const gw = Math.min(ir.width, 200, window.innerWidth * 0.34), gh = ir.height * gw / ir.width;
+    const ghost = document.createElement('img'); ghost.className = 'n-ghost'; ghost.alt = '';
+    if (s.firstChild.src) ghost.src = s.firstChild.src;
+    ghost.style.width = gw + 'px'; ghost.style.height = gh + 'px';
+    const box = el('div', 'n-drop'); box.style.display = 'none';
+    document.body.appendChild(box); document.body.appendChild(ghost);
+    s.classList.add('ghosted');
+    document.body.classList.add('n-dragging');
+    imgOp = { type: 'drag', s, a: imgAttrs(s), ghost, box, gx: (x0 - ir.left) / ir.width, gy: (y0 - ir.top) / ir.height, gw, gh, cx: x0, cy: y0, target: null,
+      // with a finger the small copy floats above it, so the finger does not hide it
+      ox: touch ? gw / 2 : null, oy: touch ? gh + 18 : null };
+    dragMove(x0, y0);
+    if (!asRaf) asRaf = requestAnimationFrame(autoScrollTick);
+  }
+  function dragMove(x, y) {
+    const op = imgOp; if (!op || op.type !== 'drag') return;
+    op.cx = x; op.cy = y;
+    const gx = op.ox != null ? x - op.ox : x - op.gx * op.gw, gy = op.oy != null ? y - op.oy : y - op.gy * op.gh;
+    op.ghost.style.transform = 'translate(' + Math.round(gx) + 'px,' + Math.round(gy) + 'px)';
+    const t = op.target = photoDropTarget(x, y, op);
+    if (!t) { op.box.style.display = 'none'; return; }
+    Object.assign(op.box.style, { display: 'block', left: t.box.left + 'px', top: t.box.top + 'px', width: t.box.width + 'px', height: t.box.height + 'px' });
+  }
+  // the text position at the start (or end) of the line at height y, stepping over photos that float there
+  function probeLine(px, py, dragged) {
+    const ed = edState.ed;
+    for (let i = 0; i < 4; i++) {
+      const p = caretPos(px, py);
+      if (!inEd(p)) return null;
+      const im = closestImg(p.node);
+      if (!im) return p;
+      if (im === dragged) return { self: true };
+      const ir = im.getBoundingClientRect();
+      if (im.classList.contains('fl') && px < ir.right) { px = ir.right + 2; continue; }
+      if (im.classList.contains('fr') && px > ir.left) { px = ir.left - 2; continue; }
+      return { img: im, before: py < ir.top + ir.height / 2 };
+    }
+    return null;
+  }
+  // where a photo lands for height y: at the start of that line (floating photos), or between lines (photos on their own line:
+  // before the line, or after it when the finger is in its lower half). Returns the text position and the y where the photo's top goes.
+  function lineSlot(py, between, dragged) {
+    const ed = edState.ed, er = ed.getBoundingClientRect();
+    py = clampN(py, er.top + 2, er.bottom - 2);
+    let p = probeLine(er.left + 2, py, dragged), end = false;
+    if (p && !p.img && !p.self && between) {
+      const rc = posRect(p);
+      if (rc && rc.height && py > rc.top + rc.height / 2) {
+        const q = probeLine(er.right - 2, rc.top + rc.height / 2, dragged);
+        if (q && !q.img && !q.self) { p = q; end = true; }
+      }
+    }
+    if (p && !p.img && !p.self && between && !end) {
+      // photos floating at the start of this line stay with their text: a photo on its own line goes in before them
+      let n = p.node, off = p.off;
+      if (n.nodeType === 3 && off === 0 && n.parentNode) { off = [...n.parentNode.childNodes].indexOf(n); n = n.parentNode; }
+      if (n.nodeType === 1) {
+        while (off > 0) {
+          const prev = n.childNodes[off - 1];
+          if (prev && ((prev.nodeType === 1 && (prev.classList.contains('fl') || prev.classList.contains('fr'))) || (prev.nodeType === 3 && !prev.nodeValue.length))) off--;
+          else break;
+        }
+        p = { node: n, off };
+      }
+    }
+    if (!p) p = { node: ed, off: ed.childNodes.length };
+    let top;
+    if (p.self) top = dragged.getBoundingClientRect().top;
+    else if (p.img) { const ir = p.img.getBoundingClientRect(); top = p.before ? ir.top : ir.bottom; }
+    else if (p.node === ed && p.off >= ed.childNodes.length) { const lc = ed.lastChild; top = lc && lc.getBoundingClientRect ? lc.getBoundingClientRect().bottom : er.top; }
+    else { const rc = posRect(p); top = rc ? (end ? rc.bottom : rc.top) : er.top; }
+    return { p, top };
+  }
+  function rangeAt(p) {
+    const ed = edState.ed, rg = document.createRange();
+    if (!p) { rg.selectNodeContents(ed); rg.collapse(false); return rg; }
+    if (p.img) { if (p.before) rg.setStartBefore(p.img); else rg.setStartAfter(p.img); }
+    else rg.setStart(p.node, p.off);
+    rg.collapse(true);
+    return rg;
+  }
+  function photoDropTarget(cx, cy, op) {
+    const ed = edState.ed, er = ed.getBoundingClientRect(), ew = ed.clientWidth;
+    if (!ew) return null;
+    const wpx = op.a.w / 100 * ew, hpx = wpx * op.a.r;
+    let x = clampN(((cx - er.left) - op.gx * wpx) / ew * 100, 0, 100 - op.a.w);
+    for (const sx of [0, (100 - op.a.w) / 2, 100 - op.a.w]) if (Math.abs(x - sx) < 2.5) { x = sx; break; }
+    const mode = imgMode(op.a.w, x);
+    const { p, top } = lineSlot(cy, mode === 'b', op.s);
+    return { p, x, mode, box: { left: er.left + x / 100 * ew, top, width: wpx, height: hpx } };
+  }
+  function autoScrollTick() {
+    asRaf = 0;
+    const op = imgOp; if (!op || op.type !== 'drag') return;
+    const r = contentEl.getBoundingClientRect(), edge = 60;
+    let v = 0;
+    if (op.cy < r.top + edge) v = -(r.top + edge - op.cy) / 3;
+    else if (op.cy > r.bottom - edge) v = (op.cy - (r.bottom - edge)) / 3;
+    if (v) { const b = contentEl.scrollTop; contentEl.scrollTop = b + clampN(v, -22, 22); if (contentEl.scrollTop !== b) dragMove(op.cx, op.cy); }
+    asRaf = requestAnimationFrame(autoScrollTick);
+  }
+  contentEl.addEventListener('scroll', () => { if (imgOp && imgOp.type === 'drag') dragMove(imgOp.cx, imgOp.cy); }, { passive: true });
+  function finishDrag(cancel, touch) {
+    const op = imgOp; if (!op || op.type !== 'drag') return;
+    imgOp = null;
+    if (asRaf) { cancelAnimationFrame(asRaf); asRaf = 0; }
+    op.ghost.remove(); op.box.remove();
+    op.s.classList.remove('ghosted');
+    document.body.classList.remove('n-dragging');
+    if (!touch) suppressClick = Date.now();
+    const t = op.target, s = op.s;
+    if (!edState || !s.isConnected) return;
+    if (cancel || !t) { selectImg(s); return; }
+    histFlush();
+    if (!t.p.self) {
+      try {
+        const rg = rangeAt(t.p);
+        const oldParent = s.parentNode;
+        s.remove();
+        rg.insertNode(s);
+        tidyAfterRemove(oldParent);
+        ensureLineAfter(s);
+      } catch (e) { console.warn(e); }
+    }
+    setImgAttrs(s, { ...op.a, x: t.x });
+    selectImg(s);
+    contentChanged(true);
+  }
+
+  // ---------- resizing ----------
+  function beginResize(h, x0, y0, touch) {
+    const s = selImg; if (!s || !edState || imgOp) return;
+    histFlush();
+    const a = imgAttrs(s), ew = edState.ed.clientWidth || 1;
+    const centered = Math.abs(a.x - (100 - a.w) / 2) < 0.6;
+    const sx = h[1] === 'r' ? 1 : -1, sy = h[0] === 'b' ? 1 : -1;
+    const lab = el('div', 'n-size'); lab.textContent = Math.round(a.w) + '%'; selBox.appendChild(lab);
+    imgOp = { type: 'resize', s };
+    trackPointer(touch, (x, y, ev) => {
+      if (touch && ev.cancelable) ev.preventDefault();
+      const gx = (x - x0) * sx * (centered ? 2 : 1), gy = (y - y0) * sy / a.r;
+      const g = Math.abs(gy) > Math.abs(gx) ? gy : gx;
+      let w = clampN(a.w + g / ew * 100, Math.max(8, 48 / ew * 100), 100);
+      for (const sw of [25, 33.3, 50, 66.7, 75, 100]) if (Math.abs(w - sw) < 1.2) { w = sw; break; }
+      const nx = centered ? (100 - w) / 2 : sx > 0 ? Math.min(a.x, 100 - w) : clampN(a.x + a.w - w, 0, 100 - w);
+      setImgAttrs(s, { id: a.id, w, x: nx, r: a.r });
+      lab.textContent = Math.round(w) + '%';
+      positionSel();
+    }, (x, y, ev, cancel) => {
+      imgOp = null; lab.remove();
+      if (!touch) suppressClick = Date.now();
+      else if (ev && ev.cancelable) ev.preventDefault();
+      if (cancel) setImgAttrs(s, a);
+      contentChanged(true);
+    });
+  }
 
   // ================= levels =================
   const levelsCol = SyncDB.collection('levels');
@@ -1284,10 +2109,19 @@
   function hideDropOverlay() { dropOv.classList.remove('show'); }
   mainEl.addEventListener('dragover', e => {
     if (!hasFiles(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy';
-    dropOv.innerHTML = '<div>' + I.sheet + '<b>Drop to add to ' + esc(currentDropTarget().label) + '</b></div>';
+    const toNote = currentPage === 'notes' && edState && dragHasImages(e);
+    dropOv.innerHTML = '<div>' + (toNote ? NI.photo : I.sheet) + '<b>' + (toNote ? 'Drop to add photos to this note' : 'Drop to add to ' + esc(currentDropTarget().label)) + '</b></div>';
     dropOv.classList.add('show'); clearTimeout(ovTimer); ovTimer = setTimeout(hideDropOverlay, 250);
   });
-  mainEl.addEventListener('drop', e => { if (!hasFiles(e)) return; e.preventDefault(); hideDropOverlay(); const t = currentDropTarget(); addFiles([...e.dataTransfer.files], t.scope, t.folderId); });
+  mainEl.addEventListener('drop', e => {
+    if (!hasFiles(e)) return; e.preventDefault(); hideDropOverlay();
+    let fl = [...e.dataTransfer.files];
+    if (currentPage === 'notes' && edState) {   // photos dropped on an open note go into it (at the end)
+      const pics = fl.filter(isPicFile);
+      if (pics.length) { insertPhotos(pics, null); fl = fl.filter(f => !isPicFile(f)); if (!fl.length) return; }
+    }
+    const t = currentDropTarget(); addFiles(fl, t.scope, t.folderId);
+  });
   window.addEventListener('dragover', e => { if (hasFiles(e)) e.preventDefault(); });
   window.addEventListener('drop', e => { if (hasFiles(e)) e.preventDefault(); });
 
@@ -1891,7 +2725,7 @@
     window.renderProfileCard();
     pageL.style.display = currentPage === 'levels' ? 'block' : 'none';
     if (currentPage === 'levels') { const ae = document.activeElement; if (!(ae && pageL.contains(ae) && (ae.tagName === 'INPUT' || ae.tagName === 'SELECT'))) renderLevels(); }
-    if (currentPage !== 'notes') pageN.dataset.noteId = '';
+    if (currentPage !== 'notes') { if (edState) closeEditor(); pageN.dataset.noteId = ''; }
     if (currentPage === 'notes') renderNote();
     else if (currentPage === 'territory') renderTerritory();
     else if (currentPage === 'achievements') renderAchievements();
@@ -2594,7 +3428,7 @@
   }
   applyTheme((() => { try { return localStorage.getItem('tgr_theme'); } catch (e) { return null; } })());
 
-  const APP_VERSION = '18';
+  const APP_VERSION = '19';
   async function checkForUpdates(btn, msg) {
     btn.disabled = true; btn.textContent = 'Checking...';
     try {
