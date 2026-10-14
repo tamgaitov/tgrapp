@@ -194,6 +194,18 @@
   .th-prev u { display: block; width: 50%; height: 8px; border-radius: 4px; }
   .th-system { background: none; border: 1px dashed var(--border); border-radius: 10px; padding: 9px; color: var(--text-dim); cursor: pointer; font-family: inherit; font-size: 13px; }
   .th-system.on { border-style: solid; border-color: var(--accent); color: var(--accent); }
+  .wg-card { max-width: 440px; }
+  .wg-folders { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 10px; max-height: 230px; overflow-y: auto; flex-shrink: 0; }
+  .wg-f { display: flex; align-items: center; gap: 10px; padding: 9px 10px; font-size: 14px; border-bottom: 1px solid var(--border); cursor: pointer; min-width: 0; }
+  .wg-f:last-child { border-bottom: none; }
+  .wg-f input { width: 17px; height: 17px; margin: 0; flex-shrink: 0; accent-color: var(--accent); }
+  .wg-f span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wg-all { font-weight: 600; }
+  .wg-steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 7px; font-size: 13.5px; line-height: 1.45; }
+  .wg-steps a { color: var(--accent); }
+  .wg-manual { width: 100%; height: 130px; flex-shrink: 0; resize: vertical; font: 11px/1.35 ui-monospace, Menlo, monospace; background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px; }
+  .wg-manual[hidden] { display: none; }
 
   /* themes */
   :root[data-theme="blood"] {
@@ -553,9 +565,10 @@
   cellsCol.orderBy('filledAt', 'asc').onSnapshot(s => { cells = s.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); });
   const customCol = SyncDB.collection('customTrophies');
   const settingsCol = SyncDB.collection('appSettings');
-  let customs = [], shelfLayout = {}, profile = {};
+  let customs = [], shelfLayout = {}, profile = {}, widgetCfg = {};
   customCol.orderBy('createdAt', 'asc').onSnapshot(s => { customs = s.docs.map(d => ({ id: d.id, ...d.data() })); if (currentPage === 'achievements') renderAll(); });
   settingsCol.orderBy('k', 'asc').onSnapshot(s => {
+    const wg = s.docs.find(x => x.id === 'widget'); widgetCfg = wg ? wg.data() : {};
     const d = s.docs.find(x => x.id === 'shelf'); shelfLayout = (d && d.data().slots) || {};
     const pr = s.docs.find(x => x.id === 'profile'); profile = pr ? pr.data() : {};
     if (window.renderProfileCard) window.renderProfileCard();
@@ -3428,7 +3441,7 @@
   }
   applyTheme((() => { try { return localStorage.getItem('tgr_theme'); } catch (e) { return null; } })());
 
-  const APP_VERSION = '19';
+  const APP_VERSION = '20';
   async function checkForUpdates(btn, msg) {
     btn.disabled = true; btn.textContent = 'Checking...';
     try {
@@ -3483,6 +3496,8 @@
         ${document.body.classList.contains('has-bgimg') ? '<button class="x-btn ghost-danger" id="set-bg-rm">Remove</button><input type="range" id="set-bg-op" min="0.05" max="0.5" step="0.01" aria-label="Picture visibility">' : ''}</div>
       <p class="a-m-sub" style="margin:4px 0 0">Sync</p>
       <button class="x-btn" id="set-sync" style="text-align:left">Sync with GitHub</button>
+      <p class="a-m-sub" style="margin:4px 0 0">Widget</p>
+      <button class="x-btn" id="set-widget" style="text-align:left">iPhone widget: Home Screen and Lock Screen</button>
       <p class="a-m-sub" style="margin:4px 0 0">App</p>
       <button class="x-btn" id="set-update" style="text-align:left">Check for updates</button>
       <span class="t-hint" id="set-update-msg">Version ${APP_VERSION} · page ${window.PAGE_VERSION || 'old'}</span>
@@ -3496,6 +3511,7 @@
     });
     setModal.querySelector('.th-system').addEventListener('click', () => { applyTheme(null); openSettings(); });
     setModal.querySelector('#set-sync').addEventListener('click', () => { setModal.classList.remove('open'); document.getElementById('sync-btn').click(); });
+    setModal.querySelector('#set-widget').addEventListener('click', () => openWidgetPanel());
     setModal.querySelector('#set-bg').addEventListener('click', () => bgInput.click());
     const bgRm = setModal.querySelector('#set-bg-rm');
     if (bgRm) bgRm.addEventListener('click', () => { try { localStorage.removeItem(BG_KEY); } catch (e) {} applyBg(); openSettings(); });
@@ -3508,6 +3524,102 @@
     setModal.querySelector('#set-update').addEventListener('click', e => checkForUpdates(e.currentTarget, setModal.querySelector('#set-update-msg')));
     setModal.classList.add('open');
   }
+  // ================= iPhone widget (through the Scriptable app) =================
+  // iPhone gives widgets only to native apps, so the widget is a Scriptable script that reads the same data.json from GitHub.
+  // The app hands over the script with the sync settings filled in; folders and look live in appSettings/widget (synced),
+  // so the widget picks up changes by itself.
+  const WG_LOOKS = [['auto', 'Match iPhone'], ['light', 'Light'], ['dark', 'Dark'], ['blood', 'Blood'], ['skyrim', 'Skyrim'], ['wayne', 'Bruce Wayne']];
+  let wgScript = null;
+  function loadWidgetScript() {
+    if (wgScript) return Promise.resolve(wgScript);
+    return fetch('./tgr-widget.js?v=' + APP_VERSION).then(r => (r.ok ? r.text() : null))
+      .then(t => (wgScript = t && t.includes('__TGR_CONFIG__') ? t : null)).catch(() => null);
+  }
+  function saveWidgetCfg(patch) {
+    widgetCfg = { ...widgetCfg, ...patch };
+    settingsCol.doc('widget').set({ k: 'widget', folders: widgetCfg.folders || null, look: widgetCfg.look || 'auto' });
+  }
+  function todoFolderTree() {
+    const out = [], key = f => (f.order != null ? f.order : f.createdAt || 0);
+    const kids = pid => allFolders.filter(f => (f.parentId || null) === pid).sort((a, b) => key(a) - key(b));
+    const walk = (pid, depth) => { if (depth > 8) return; kids(pid).forEach(f => { out.push({ f, depth }); walk(f.id, depth + 1); }); };
+    walk(null, 0);
+    return out;
+  }
+  function legacyCopy(text) {
+    const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;';
+    document.body.appendChild(ta); ta.select(); try { ta.setSelectionRange(0, text.length); } catch (e) {}
+    let ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+    ta.remove(); return ok;
+  }
+  function copyText(text) {
+    try { if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text).then(() => true, () => legacyCopy(text)); } catch (e) {}
+    return Promise.resolve(legacyCopy(text));
+  }
+  function openWidgetPanel() {
+    const tree = todoFolderTree();
+    const ids = new Set(tree.map(x => x.f.id));
+    const chosen = Array.isArray(widgetCfg.folders) ? widgetCfg.folders.filter(id => ids.has(id)) : [];
+    const sel = chosen.length ? new Set(chosen) : null;
+    const look = widgetCfg.look || 'auto';
+    setModal.innerHTML = `<div class="a-m-card wg-card" role="dialog" aria-label="iPhone widget">
+      <div><p class="a-m-name">iPhone widget</p>
+      <p class="a-m-desc">Your most important open tasks on the Home Screen and the Lock Screen: overdue and today's first, then by priority.
+        iPhone doesn't let web apps have widgets, so it works through the free Scriptable app.</p></div>
+      <p class="a-m-sub">Folders</p>
+      <div class="wg-folders">
+        <label class="wg-f wg-all"><input type="checkbox" data-all ${sel ? '' : 'checked'}><span>All folders</span></label>
+        ${tree.map(x => `<label class="wg-f" style="padding-left:${10 + x.depth * 20}px"><input type="checkbox" data-id="${esc(x.f.id)}" ${!sel || sel.has(x.f.id) ? 'checked' : ''}><span>${esc(x.f.name)}</span></label>`).join('')}
+        ${tree.length ? '' : '<div class="wg-f" style="color:var(--text-dim)">No ToDo folders yet</div>'}
+      </div>
+      <p class="a-m-sub">Look</p>
+      <div class="t-chips">${WG_LOOKS.map(([id, n]) => `<button class="t-chip${look === id ? ' on' : ''}" data-look="${id}">${n}</button>`).join('')}</div>
+      <p class="a-m-sub">Set up once</p>
+      <ol class="wg-steps">
+        <li>Install <a href="https://apps.apple.com/app/scriptable/id1405459188" target="_blank" rel="noopener">Scriptable</a> from the App Store, it's free.</li>
+        <li>Tap <b>Copy widget script</b>. In Scriptable tap <b>+</b>, paste, tap the name at the top and call it <b>TGRAPP</b>, then <b>Done</b>.</li>
+        <li><b>Home Screen:</b> hold an empty spot → <b>Edit</b> → <b>Add Widget</b> → Scriptable → pick a size. Then hold the widget → <b>Edit Widget</b> → Script: <b>TGRAPP</b>.</li>
+        <li><b>Lock Screen:</b> hold it → <b>Customize</b> → <b>Lock Screen</b> → tap the widget row → Scriptable → the wide one. Tap it → Script: <b>TGRAPP</b>.</li>
+      </ol>
+      <button class="x-btn primary" id="wg-copy">Copy widget script</button>
+      <span class="t-hint" id="wg-msg">Folders and look update in the widget by themselves, no need to copy again. The widget refreshes about every 15 to 30 minutes, iPhone decides when.</span>
+      <textarea class="wg-manual" readonly hidden aria-label="Widget script"></textarea>
+      <div class="cr-actions"><button class="x-btn" id="wg-back">Back</button><span style="flex:1"></span><button class="x-btn" id="wg-close">Close</button></div></div>`;
+    const card = setModal.querySelector('.wg-card'), msg = card.querySelector('#wg-msg'), copyBtn = card.querySelector('#wg-copy');
+    const boxes = [...card.querySelectorAll('input[data-id]')], all = card.querySelector('input[data-all]');
+    const syncFolders = () => {
+      const on = boxes.filter(b => b.checked).map(b => b.dataset.id);
+      all.checked = on.length === boxes.length;
+      saveWidgetCfg({ folders: on.length === boxes.length ? null : on });
+    };
+    all.addEventListener('change', () => { if (!all.checked) { all.checked = true; return; } boxes.forEach(b => { b.checked = true; }); syncFolders(); });
+    boxes.forEach(b => b.addEventListener('change', () => {
+      if (!boxes.some(x => x.checked)) { b.checked = true; msg.textContent = 'Keep at least one folder.'; return; }
+      syncFolders();
+    }));
+    card.querySelectorAll('[data-look]').forEach(b => b.addEventListener('click', () => {
+      card.querySelectorAll('[data-look]').forEach(x => x.classList.toggle('on', x === b));
+      saveWidgetCfg({ look: b.dataset.look });
+    }));
+    const cfg = SyncDB.getConfig();
+    if (!cfg || !cfg.token) { copyBtn.disabled = true; msg.textContent = 'Turn on Sync with GitHub first: the widget reads your tasks from there.'; }
+    loadWidgetScript();
+    copyBtn.addEventListener('click', () => {
+      const c = SyncDB.getConfig(); if (!c || !c.token) return;
+      if (!wgScript) { msg.textContent = 'Loading the script, tap again in a second.'; loadWidgetScript(); return; }
+      const text = wgScript.replace('__TGR_CONFIG__', () => JSON.stringify({ owner: c.owner, repo: c.repo, path: c.path || 'data.json', token: c.token }));
+      copyText(text).then(ok => {
+        if (ok) { copyBtn.textContent = 'Copied ✓'; msg.textContent = 'Copied. Open Scriptable, tap + and paste. The script has your sync token inside, so don\'t share it.'; return; }
+        const ta = card.querySelector('.wg-manual'); ta.hidden = false; ta.value = text; ta.focus(); ta.select();
+        msg.textContent = 'Copying didn\'t work here. Select everything in the box below and copy it.';
+      });
+    });
+    card.querySelector('#wg-back').addEventListener('click', () => openSettings());
+    card.querySelector('#wg-close').addEventListener('click', () => setModal.classList.remove('open'));
+    setModal.classList.add('open');
+  }
+
   const gear = el('button', 'icon-btn', '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>');
   gear.id = 'settings-btn'; gear.title = 'Settings';
   gear.addEventListener('click', openSettings);

@@ -1,9 +1,12 @@
 // Offline cache. Bump VERSION after changing app files so devices pick up the update.
-const VERSION = 'tgrapp-v19';
+const VERSION = 'tgrapp-v20';
 const FILES = ['./', './index.html', './sync-db.js', './extras.js', './xlsx.full.min.js', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
+const OPTIONAL = ['./tgr-widget.js'];   // nice to have offline, but a missing one must not block the update
+
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES).then(() => Promise.all(OPTIONAL.map(f => c.add(f).catch(() => {})))))
+    .then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim()));
