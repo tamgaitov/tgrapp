@@ -209,13 +209,11 @@
 
   /* themes */
   :root[data-theme="blood"] {
-    --bg: #140708; --bg-elevated: #1e0b0d; --sidebar-bg: #0c0405; --sidebar-text: #ecd3d4; --sidebar-text-dim: #93646a;
-    --sidebar-active: #3d0f15; --sidebar-hover: #220a0d; --text: #f6e9e9; --text-dim: #b3898c; --accent: #c8102e; --accent-soft: #3d0d14;
-    --border: #3c171c; --danger: #ff6b6b; --popover-bg: #241013; color-scheme: dark;
+    --bg: #0b0b0c; --bg-elevated: #141416; --sidebar-bg: #060607; --sidebar-text: #d9d9dc; --sidebar-text-dim: #6c6c72;
+    --sidebar-active: #1c1c1f; --sidebar-hover: #111113; --text: #ececee; --text-dim: #8a8a90; --accent: #c8102e; --accent-soft: #2a0d12;
+    --border: #232326; --danger: #ff6b6b; --popover-bg: #18181b; color-scheme: dark;
   }
-  :root[data-theme="blood"] body { background: radial-gradient(1100px 520px at 75% -12%, #3d0a12 0%, transparent 65%), var(--bg); }
-  :root[data-theme="blood"] #sidebar { box-shadow: inset -1px 0 0 #3c0c12; }
-  :root[data-theme="blood"] .t-cell:not(.filled) { border-color: #4a1a20; }
+  :root[data-theme="blood"] #sidebar { box-shadow: inset -1px 0 0 #1c1c1f; }
 
   :root[data-theme="skyrim"] {
     --bg: #16140f; --bg-elevated: #211e18; --sidebar-bg: #0e0d0a; --sidebar-text: #e6dcc6; --sidebar-text-dim: #8f8672;
@@ -3424,7 +3422,7 @@
   const THEMES = [
     { id: 'light', name: 'Light', c: ['#f6f5f2', '#ffffff', '#1c1e22', '#1d40c4'] },
     { id: 'dark', name: 'Dark', c: ['#121317', '#191b20', '#0e0f12', '#3f5fd6'] },
-    { id: 'blood', name: 'Blood', c: ['#140708', '#1e0b0d', '#0c0405', '#c8102e'] },
+    { id: 'blood', name: 'Blood', c: ['#0b0b0c', '#141416', '#060607', '#c8102e'] },
     { id: 'skyrim', name: 'Skyrim', c: ['#16140f', '#201d17', '#0e0d0a', '#b8975a'] },
     { id: 'wayne', name: 'Bruce Wayne', c: ['#0a0b0d', '#16191d', '#050607', '#9fb0c3'] }
   ];
