@@ -11,7 +11,7 @@ const PRIO = { '2': ['#e03e3e', 'Highest', 'ðŸ”´'], '1': ['#e0823e', 'High', 'ðŸ
 const LOOKS = {
   light: { bg: '#f6f5f2', bg2: '#ffffff', text: '#1a1b1e', dim: '#6b6d72', accent: '#1d40c4', danger: '#d64545' },
   dark: { bg: '#121317', bg2: '#1b1d23', text: '#eceef1', dim: '#8b8d93', accent: '#5b78e6', danger: '#ef6a6a' },
-  blood: { bg: '#140708', bg2: '#3a0a11', text: '#f6e9e9', dim: '#b3898c', accent: '#e0263f', danger: '#ff6b6b' },
+  blood: { bg: '#0b0b0c', bg2: '#1a1a1d', text: '#ececee', dim: '#8a8a90', accent: '#e0263f', danger: '#ff6b6b' },
   skyrim: { bg: '#16140f', bg2: '#2b2518', text: '#ede5d1', dim: '#a59c86', accent: '#c4a468', danger: '#d9644a' },
   wayne: { bg: '#0a0b0d', bg2: '#1a1e24', text: '#e4e7eb', dim: '#868c95', accent: '#9fb0c3', danger: '#d9534f' }
 };
