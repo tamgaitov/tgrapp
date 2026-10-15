@@ -276,6 +276,8 @@
   .plan-link select { flex: 1; min-width: 0; max-width: 300px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
     padding: 6px 8px; color: var(--text); font-size: 13.5px; font-family: inherit; outline: none; }
   .plan-link select:focus { border-color: var(--accent); }
+  .plan-edit-field { cursor: text; text-decoration: underline dashed var(--text-dim); text-underline-offset: 4px; }
+  .plan-edit-field:has(.inline-edit) { text-decoration: none; }
   @media (hover: none) { .plan-link select { font-size: 16px; } }   /* iOS zooms into fields under 16px */
 
   .progress-ex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
@@ -292,6 +294,11 @@
   .progress-ex-tile .pex-del:hover { color: var(--danger); }
   .pl-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 18px; }
   .pl-title { font-size: 19px; margin: 0 0 12px; }
+  .pl-head { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 12px; }
+  .pl-head .pl-title { flex: 1; min-width: 0; margin: 0; cursor: text; }
+  .pl-rename { background: none; border: none; color: var(--text-dim); cursor: pointer; width: 28px; height: 28px; flex-shrink: 0;
+    border-radius: 7px; display: flex; align-items: center; justify-content: center; }
+  .pl-rename:hover { color: var(--accent); background: var(--accent-soft); }
   .pl-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
   .pl-stats div { background: var(--bg); border-radius: 10px; padding: 9px 11px; }
   .pl-stats b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
@@ -1636,9 +1643,26 @@
     if (linked) open(linked.id);
     else addProgressEx(planEx.name.trim(), open);
   }
-  function setPlanExLink(planEx, progressId) {
-    if (usingLocal) { planEx.progressId = progressId; saveLocal(); renderGymPlan(); }
-    else gymExercisesCol.doc(planEx.id).update({ progressId }).catch(() => {});
+  function updatePlanEx(planEx, patch) {
+    if (usingLocal) { Object.assign(planEx, patch); saveLocal(); renderGymPlan(); }
+    else gymExercisesCol.doc(planEx.id).update(patch).catch(() => {});
+  }
+  function setPlanExLink(planEx, progressId) { updatePlanEx(planEx, { progressId }); }
+  // Renames keep every link (auto links get pinned), so the weight history stays attached.
+  function renamePlanEx(planEx, name) {
+    const linked = linkedProgressEx(planEx);
+    updatePlanEx(planEx, { name, progressId: linked ? linked.id : null });
+  }
+  function renameProgressEx(pex, name) {
+    const pin = allGymExercises.filter(e => e.progressId !== pex.id && (linkedProgressEx(e) || {}).id === pex.id);
+    if (usingLocal) {
+      pin.forEach(e => { e.progressId = pex.id; });
+      const p = allGymPEx.find(x => x.id === pex.id); if (p) p.name = name;
+      saveLocal(); renderAll();
+    } else {
+      pin.forEach(e => gymExercisesCol.doc(e.id).update({ progressId: pex.id }).catch(() => {}));
+      gymPExCol.doc(pex.id).update({ name }).catch(() => {});
+    }
   }
   function buildPlanLinkPicker(planEx) {
     const pexList = allGymPEx.slice().sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -1748,6 +1772,10 @@
 
     const list = document.createElement('div');
     list.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+    const editable = (el, value, onSave) => {
+      el.classList.add('plan-edit-field'); el.title = 'Tap to edit';
+      el.addEventListener('click', () => inlineEdit(el, value, onSave));
+    };
     exercises.forEach(ex => {
       const row = document.createElement('div');
       row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:10px;background:var(--bg-elevated);border:1px solid var(--border);' + (planEditing ? '' : 'cursor:pointer;');
@@ -1757,11 +1785,13 @@
       nameEl.style.cssText = 'font-size:14.5px;font-weight:600;';
       nameEl.textContent = ex.name;
       left.appendChild(nameEl);
-      if (ex.scheme) {
+      if (planEditing) editable(nameEl, ex.name, v => renamePlanEx(ex, v));
+      if (ex.scheme || planEditing) {
         const schemeEl = document.createElement('div');
         schemeEl.style.cssText = 'font-size:12.5px;color:var(--text-dim);margin-top:2px;';
-        schemeEl.textContent = ex.scheme;
+        schemeEl.textContent = ex.scheme || '+ sets x reps';
         left.appendChild(schemeEl);
+        if (planEditing) editable(schemeEl, ex.scheme || '', v => updatePlanEx(ex, { scheme: v }));
       }
       row.appendChild(left);
       if (planEditing) {
@@ -1822,10 +1852,21 @@
       const fmtKg = v => (Math.round(v * 100) / 100).toString().replace('.', ',');
       const card = document.createElement('div');
       card.className = 'pl-card';
+      const head = document.createElement('div');
+      head.className = 'pl-head';
       const title = document.createElement('h1');
       title.className = 'pl-title';
       title.textContent = ex.name;
-      card.appendChild(title);
+      title.title = 'Tap to rename';
+      const renameBtn = document.createElement('button');
+      renameBtn.className = 'pl-rename';
+      renameBtn.setAttribute('aria-label', 'Rename');
+      renameBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M3 13L3.6 10.4L11 3L13 5L5.6 12.4Z"/><path d="M9.5 4.5L11.5 6.5"/></svg>';
+      const rename = () => inlineEdit(title, ex.name, v => renameProgressEx(ex, v));
+      title.addEventListener('click', rename);
+      renameBtn.addEventListener('click', rename);
+      head.appendChild(title); head.appendChild(renameBtn);
+      card.appendChild(head);
 
       if (entries.length) {
         const vals = entries.map(e => +e.value);
@@ -2055,7 +2096,7 @@
       tasksCol.doc(t.id).update(patch).catch(() => {});
     }
   }
-  window.PAGE_VERSION = '24';
+  window.PAGE_VERSION = '25';
   const MAIN_SECTIONS = ['__root__', '__gym__', '__notes__', '__fin__', '__mand__', '__lvl__', '__terr__', '__ach__'];
   function openSection(key) { MAIN_SECTIONS.forEach(k => { if (k !== key) expanded.delete(k); }); expanded.add(key); }
   window.openSection = openSection;
