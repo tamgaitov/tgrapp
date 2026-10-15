@@ -272,6 +272,11 @@
   .ex-add-form input:focus { border-color: var(--accent); }
   .ex-add-form .ex-name-inp { flex: 1; min-width: 0; }
   .ex-add-form .ex-scheme-inp { width: 90px; flex-shrink: 0; }
+  .plan-link { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--text-dim); }
+  .plan-link select { flex: 1; min-width: 0; max-width: 300px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px 8px; color: var(--text); font-size: 13.5px; font-family: inherit; outline: none; }
+  .plan-link select:focus { border-color: var(--accent); }
+  @media (hover: none) { .plan-link select { font-size: 16px; } }   /* iOS zooms into fields under 16px */
 
   .progress-ex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
   .progress-ex-tile {
@@ -1593,6 +1598,7 @@
   let currentPlanDay = 'mon';
   let currentProgressExId = null;
   let progressFromPlan = false;   // exercise was opened from Plan, so "back" returns there
+  let planEditing = false;        // Plan "Edit" mode: link exercises to Progress, delete them
   let gymSeeded = false;
 
   function seedGymExercisesIfEmpty() {
@@ -1609,18 +1615,55 @@
     if (usingLocal) { saveLocal(); if (currentPage === 'gym') renderGymPage(); }
   }
 
-  function navigateGymTab(tab) { currentPage = 'gym'; currentGymTab = tab; currentProgressExId = null; progressFromPlan = false; renderAll(); autoCollapseOnMobile(); }
+  function navigateGymTab(tab) { currentPage = 'gym'; currentGymTab = tab; currentProgressExId = null; progressFromPlan = false; planEditing = false; renderAll(); autoCollapseOnMobile(); }
   function navigateGymDay(day) { currentPlanDay = day; renderGymPage(); }
   function navigateProgressEx(id) { currentProgressExId = id; progressFromPlan = false; renderGymPage(); }
-  // Plan and Progress keep separate exercise lists: find the Progress one by name, create it if missing, and open it.
-  function openPlanExInProgress(name) {
-    const key = s => String(s || '').toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ').trim();
+
+  // Plan and Progress keep separate exercise lists. A plan exercise opens the Progress one picked in Edit,
+  // otherwise the one with the same name, which is created if there is none.
+  const exKey = s => String(s || '').toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ').trim();
+  function linkedProgressEx(planEx) {
+    return allGymPEx.find(e => e.id === planEx.progressId) || allGymPEx.find(e => exKey(e.name) === exKey(planEx.name));
+  }
+  function addProgressEx(name, then) {
+    const data = { name, order: Date.now() };
+    if (usingLocal) { const id = 'pe' + Date.now() + Math.random(); allGymPEx.push({ id, ...data }); saveLocal(); then(id); }
+    else gymPExCol.add(data).then(ref => then(ref.id)).catch(() => {});
+  }
+  function openPlanExInProgress(planEx) {
     const open = id => { currentGymTab = 'progress'; currentProgressExId = id; progressFromPlan = true; renderAll(); };
-    const found = allGymPEx.find(e => key(e.name) === key(name));
-    if (found) return open(found.id);
-    const data = { name: name.trim(), order: Date.now() };
-    if (usingLocal) { const id = 'pe' + Date.now() + Math.random(); allGymPEx.push({ id, ...data }); saveLocal(); open(id); }
-    else gymPExCol.add(data).then(ref => open(ref.id)).catch(() => {});
+    const linked = linkedProgressEx(planEx);
+    if (linked) open(linked.id);
+    else addProgressEx(planEx.name.trim(), open);
+  }
+  function setPlanExLink(planEx, progressId) {
+    if (usingLocal) { planEx.progressId = progressId; saveLocal(); renderGymPlan(); }
+    else gymExercisesCol.doc(planEx.id).update({ progressId }).catch(() => {});
+  }
+  function buildPlanLinkPicker(planEx) {
+    const pexList = allGymPEx.slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    const byName = pexList.find(p => exKey(p.name) === exKey(planEx.name));
+    const wrap = document.createElement('label');
+    wrap.className = 'plan-link';
+    wrap.textContent = 'Progress';
+    const sel = document.createElement('select');
+    const opt = (value, text) => { const o = document.createElement('option'); o.value = value; o.textContent = text; sel.appendChild(o); };
+    opt('', byName ? byName.name + ' (auto)' : planEx.name + ' (new)');
+    pexList.forEach(p => opt(p.id, p.name));
+    opt('__new__', '+ New exercise...');
+    const current = pexList.some(p => p.id === planEx.progressId) ? planEx.progressId : '';
+    sel.value = current;
+    sel.addEventListener('change', () => {
+      if (sel.value !== '__new__') { setPlanExLink(planEx, sel.value || null); return; }
+      sel.value = current;
+      const name = (prompt('Name in Progress', planEx.name) || '').trim();
+      if (!name) return;
+      const same = allGymPEx.find(p => exKey(p.name) === exKey(name));
+      if (same) setPlanExLink(planEx, same.id);
+      else addProgressEx(name, id => setPlanExLink(planEx, id));
+    });
+    wrap.appendChild(sel);
+    return wrap;
   }
 
   function renderGymPage() {
@@ -1644,13 +1687,22 @@
     body.appendChild(dayTabs);
 
     const exercises = allGymExercises.filter(e => e.day === currentPlanDay).sort((a, b) => (a.order || 0) - (b.order || 0));
+    if (!exercises.length) planEditing = false;
 
     const toolbar = document.createElement('div');
     toolbar.className = 'gym-toolbar';
+    const btnCss = 'background:var(--bg-elevated);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:0 16px;height:36px;font-size:13.5px;font-weight:600;cursor:pointer;';
     const addExBtn = document.createElement('button');
-    addExBtn.style.cssText = 'background:var(--bg-elevated);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:0 16px;height:36px;font-size:13.5px;font-weight:600;cursor:pointer;';
+    addExBtn.style.cssText = btnCss;
     addExBtn.textContent = '+ Exercise';
     toolbar.appendChild(addExBtn);
+    if (exercises.length) {
+      const editBtn = document.createElement('button');
+      editBtn.style.cssText = btnCss + 'margin-left:auto;' + (planEditing ? 'background:var(--accent);border-color:var(--accent);color:#fff;' : '');
+      editBtn.textContent = planEditing ? 'Done' : 'Edit';
+      editBtn.addEventListener('click', () => { planEditing = !planEditing; renderGymPlan(); });
+      toolbar.appendChild(editBtn);
+    }
     body.appendChild(toolbar);
 
     const formHolder = document.createElement('div');
@@ -1696,14 +1748,11 @@
 
     const list = document.createElement('div');
     list.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
-    // On touch screens a tap that reveals the delete button counts as hover and the row tap is lost, so it stays visible there.
-    const canHover = matchMedia('(hover: hover)').matches;
     exercises.forEach(ex => {
       const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:10px;background:var(--bg-elevated);border:1px solid var(--border);cursor:pointer;';
-      row.title = 'Log weight in Progress';
-      row.addEventListener('click', () => openPlanExInProgress(ex.name));
+      row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:10px;background:var(--bg-elevated);border:1px solid var(--border);' + (planEditing ? '' : 'cursor:pointer;');
       const left = document.createElement('div');
+      left.style.cssText = 'flex:1;min-width:0;';
       const nameEl = document.createElement('div');
       nameEl.style.cssText = 'font-size:14.5px;font-weight:600;';
       nameEl.textContent = ex.name;
@@ -1714,17 +1763,19 @@
         schemeEl.textContent = ex.scheme;
         left.appendChild(schemeEl);
       }
-      const del = document.createElement('button');
-      del.className = 'del-btn';
-      del.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 4H13M6.5 4V2.7C6.5 2.3 6.8 2 7.2 2H8.8C9.2 2 9.5 2.3 9.5 2.7V4M5 4V12.5C5 13 5.4 13.4 5.9 13.4H10.1C10.6 13.4 11 13 11 12.5V4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-      del.addEventListener('click', (e) => { e.stopPropagation(); deleteGymExercise(ex.id); });
-      if (canHover) {
-        row.addEventListener('mouseenter', () => del.style.opacity = '1');
-        row.addEventListener('mouseleave', () => del.style.opacity = '0');
-      }
-      del.style.opacity = canHover ? '0' : '1';
       row.appendChild(left);
-      row.appendChild(del);
+      if (planEditing) {
+        left.appendChild(buildPlanLinkPicker(ex));
+        const del = document.createElement('button');
+        del.className = 'del-btn';
+        del.style.opacity = '1';
+        del.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 4H13M6.5 4V2.7C6.5 2.3 6.8 2 7.2 2H8.8C9.2 2 9.5 2.3 9.5 2.7V4M5 4V12.5C5 13 5.4 13.4 5.9 13.4H10.1C10.6 13.4 11 13 11 12.5V4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        del.addEventListener('click', () => deleteGymExercise(ex.id));
+        row.appendChild(del);
+      } else {
+        row.title = 'Log weight in Progress';
+        row.addEventListener('click', () => openPlanExInProgress(ex));
+      }
       list.appendChild(row);
     });
     body.appendChild(list);
@@ -2004,7 +2055,7 @@
       tasksCol.doc(t.id).update(patch).catch(() => {});
     }
   }
-  window.PAGE_VERSION = '23';
+  window.PAGE_VERSION = '24';
   const MAIN_SECTIONS = ['__root__', '__gym__', '__notes__', '__fin__', '__mand__', '__lvl__', '__terr__', '__ach__'];
   function openSection(key) { MAIN_SECTIONS.forEach(k => { if (k !== key) expanded.delete(k); }); expanded.add(key); }
   window.openSection = openSection;
