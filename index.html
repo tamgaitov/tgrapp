@@ -305,7 +305,10 @@
   .pl-stats b small { font-size: 12px; color: var(--text-dim); font-weight: 600; }
   .pl-stats b.up { color: #33c27a; } .pl-stats b.down { color: var(--danger); }
   .pl-stats span { font-size: 11.5px; color: var(--text-dim); }
-  .pl-input { display: flex; gap: 8px; align-items: stretch; }
+  .pl-input { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px auto; gap: 8px; }
+  .pl-input .pl-add { grid-column: 4; grid-row: 1 / span 2; }
+  .pl-hint { font-size: 12.5px; color: var(--text-dim); margin-top: 10px; }
+  .pl-hint.up { color: #33c27a; font-weight: 600; }
   .pl-step { width: 44px; flex-shrink: 0; border-radius: 12px; border: 1px solid var(--border); background: var(--bg);
     color: var(--text); font-size: 20px; font-weight: 600; cursor: pointer; font-family: inherit; }
   .pl-step:hover { border-color: var(--accent); color: var(--accent); }
@@ -380,6 +383,9 @@
   .task.drop-before { box-shadow: inset 0 2px 0 0 var(--accent); }
   .task.drop-after { box-shadow: inset 0 -2px 0 0 var(--accent); }
   #done-divider { border-top: 1px solid var(--border); margin: 10px 2px; }
+  .done-more { align-self: flex-start; background: none; border: none; color: var(--text-dim); font: inherit; font-size: 13px;
+    padding: 6px 4px; cursor: pointer; }
+  .done-more:hover { color: var(--accent); }
   .del-btn {
     background: none; border: none; color: var(--text-dim); cursor: pointer; opacity: 0;
     width: 24px; height: 24px; flex-shrink: 0; border-radius: 6px; display: flex;
@@ -495,6 +501,21 @@
     #sidebar:not(.collapsed) { width: 100%; min-width: 100%; }
     #sidebar:not(.collapsed) ~ #main { display: none; }
   }
+  /* No hover on touch screens: iOS takes a tap that reveals a hidden button as hover and drops the tap, so keep them shown. */
+  @media (hover: none) {
+    .del-btn, .subtask-del, .progress-ex-tile .pex-del, .w-row .w-del { opacity: .5; }
+  }
+
+  #undo-toast { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 140%);
+    z-index: 2100; background: #16171a; color: #fff; border: 1px solid rgba(255,255,255,.12); border-radius: 14px;
+    padding: 6px 6px 6px 16px; display: flex; align-items: center; gap: 14px; box-shadow: 0 12px 30px rgba(0,0,0,.45);
+    font-size: 14px; max-width: calc(100% - 24px); opacity: 0; visibility: hidden;
+    transition: transform .3s cubic-bezier(.2,.9,.3,1.2), opacity .2s ease, visibility .3s; }
+  #undo-toast.show { transform: translate(-50%, 0); opacity: 1; visibility: visible; }
+  #undo-toast span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #undo-toast button { background: rgba(255,255,255,.12); border: none; color: #fff; font: inherit; font-weight: 700;
+    padding: 8px 14px; border-radius: 9px; cursor: pointer; flex-shrink: 0; }
+  #undo-toast button:hover { background: rgba(255,255,255,.2); }
 </style>
 </head>
 <body>
@@ -1158,6 +1179,8 @@
   function taskSortKey(t) { return (t.order !== undefined && t.order !== null) ? t.order : (t.createdAt || 0); }
 
   let dragTaskId = null;
+  const DONE_VISIBLE = 5;           // done tasks shown before "Show more"
+  const doneShowAll = new Set();    // folders where all done tasks are expanded
 
   function reorderTask(draggedId, targetId, before) {
     const dragged = allTasks.find(x => x.id === draggedId);
@@ -1202,7 +1225,9 @@
       });
     const active = all.filter(t => !t.done);
     // Done tasks: most recently completed first, old ones without completedAt at the bottom.
-    const done = all.filter(t => t.done).sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
+    const doneAll = all.filter(t => t.done).sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
+    const folderKey = norm(currentFolderId);
+    const done = doneShowAll.has(folderKey) ? doneAll : doneAll.slice(0, DONE_VISIBLE);
     const tasks = active.concat(done);
     listEl.innerHTML = '';
     emptyEl.style.display = tasks.length ? 'none' : 'block';
@@ -1411,6 +1436,14 @@
         dragTaskId = null;
       });
     });
+    if (doneAll.length > DONE_VISIBLE) {
+      const open = doneShowAll.has(folderKey);
+      const more = document.createElement('button');
+      more.className = 'done-more';
+      more.textContent = open ? 'Show less' : 'Show ' + (doneAll.length - DONE_VISIBLE) + ' more done';
+      more.addEventListener('click', () => { if (open) doneShowAll.delete(folderKey); else doneShowAll.add(folderKey); renderTasks(); });
+      listEl.appendChild(more);
+    }
   }
 
   function renderAll() {
@@ -1450,6 +1483,7 @@
     }
   }
   function deleteWeight(w) {
+    offerUndo('Entry deleted', { weights: [w] });
     if (usingLocal) {
       allWeights = allWeights.filter(x => x.id !== w.id);
       saveLocal();
@@ -1601,10 +1635,16 @@
 
   let gymExercisesCol = null, gymLogsCol = null, gymPExCol = null, gymPLogsCol = null;
   let allGymExercises = [], allGymLogs = [], allGymPEx = [], allGymPLogs = [];
+  // Plan opens on today's workout, or the next one on rest days. A day picked by hand sticks until midnight.
+  function todayPlanDay() {
+    const week = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'], today = new Date().getDay();
+    for (let i = 0; i < 7; i++) { const id = week[(today + i) % 7]; if (GYM_DAYS.some(d => d.id === id)) return id; }
+    return GYM_DAYS[0].id;
+  }
   let currentGymTab = 'plan';
-  let currentPlanDay = 'mon';
+  let currentPlanDay = todayPlanDay(), planDayDate = new Date().toDateString();
   let currentProgressExId = null;
-  let progressFromPlan = false;   // exercise was opened from Plan, so "back" returns there
+  let progressFromPlan = null;    // id of the plan exercise it was opened from, so "back" returns to Plan
   let planEditing = false;        // Plan "Edit" mode: link exercises to Progress, delete them
   let gymSeeded = false;
 
@@ -1622,13 +1662,21 @@
     if (usingLocal) { saveLocal(); if (currentPage === 'gym') renderGymPage(); }
   }
 
-  function navigateGymTab(tab) { currentPage = 'gym'; currentGymTab = tab; currentProgressExId = null; progressFromPlan = false; planEditing = false; renderAll(); autoCollapseOnMobile(); }
+  function navigateGymTab(tab) {
+    if (planDayDate !== new Date().toDateString()) { currentPlanDay = todayPlanDay(); planDayDate = new Date().toDateString(); }
+    currentPage = 'gym'; currentGymTab = tab; currentProgressExId = null; progressFromPlan = null; planEditing = false; renderAll(); autoCollapseOnMobile();
+  }
   function navigateGymDay(day) { currentPlanDay = day; renderGymPage(); }
-  function navigateProgressEx(id) { currentProgressExId = id; progressFromPlan = false; renderGymPage(); }
+  function navigateProgressEx(id) { currentProgressExId = id; progressFromPlan = null; renderGymPage(); }
 
   // Plan and Progress keep separate exercise lists. A plan exercise opens the Progress one picked in Edit,
   // otherwise the one with the same name, which is created if there is none.
   const exKey = s => String(s || '').toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ').trim();
+  // "4x6-8" -> { lo: 6, hi: 8 }; also takes "4х8" (Cyrillic х), "3 × 10-12"
+  function parseScheme(s) {
+    const m = String(s || '').match(/\d+\s*[xх×*]\s*(\d+)(?:\s*[-–—]\s*(\d+))?/i);
+    return m ? { lo: +m[1], hi: +(m[2] || m[1]) } : null;
+  }
   function linkedProgressEx(planEx) {
     return allGymPEx.find(e => e.id === planEx.progressId) || allGymPEx.find(e => exKey(e.name) === exKey(planEx.name));
   }
@@ -1638,7 +1686,7 @@
     else gymPExCol.add(data).then(ref => then(ref.id)).catch(() => {});
   }
   function openPlanExInProgress(planEx) {
-    const open = id => { currentGymTab = 'progress'; currentProgressExId = id; progressFromPlan = true; renderAll(); };
+    const open = id => { currentGymTab = 'progress'; currentProgressExId = id; progressFromPlan = planEx.id; renderAll(); };
     const linked = linkedProgressEx(planEx);
     if (linked) open(linked.id);
     else addProgressEx(planEx.name.trim(), open);
@@ -1823,6 +1871,8 @@
   }
 
   function deleteGymExercise(id) {
+    const ex = allGymExercises.find(e => e.id === id);
+    if (ex) offerUndo('Exercise deleted', { gymExercises: [ex] });
     if (usingLocal) {
       allGymExercises = allGymExercises.filter(e => e.id !== id);
       allGymLogs.forEach(l => { if (l.values && l.values[id]) delete l.values[id]; });
@@ -1880,38 +1930,60 @@
         card.appendChild(stats);
       }
 
+      // Rep range comes from the plan: the exercise it was opened from, else any plan exercise linked to it.
+      const planSrc = allGymExercises.find(e => e.id === progressFromPlan && e.scheme)
+        || allGymExercises.find(e => e.scheme && (linkedProgressEx(e) || {}).id === ex.id);
+      const range = planSrc && parseScheme(planSrc.scheme);
+      const lastEntry = entries[entries.length - 1];
+
       const addRow = document.createElement('div');
       addRow.className = 'pl-input';
-      const minus = document.createElement('button');
-      minus.className = 'pl-step'; minus.textContent = '−'; minus.setAttribute('aria-label', 'Minus 2.5 kg');
-      const field = document.createElement('label');
-      field.className = 'pl-field';
-      const inp = document.createElement('input');
-      inp.type = 'number'; inp.step = '0.5'; inp.min = '0'; inp.inputMode = 'decimal';
-      inp.placeholder = '0';
-      if (entries.length) inp.value = entries[entries.length - 1].value;
-      const unit = document.createElement('span');
-      unit.textContent = 'kg';
-      field.appendChild(inp); field.appendChild(unit);
-      const plus = document.createElement('button');
-      plus.className = 'pl-step'; plus.textContent = '+'; plus.setAttribute('aria-label', 'Plus 2.5 kg');
+      const stepper = (unitText, attrs, delta, label) => {
+        const minus = document.createElement('button');
+        minus.className = 'pl-step'; minus.textContent = '−'; minus.setAttribute('aria-label', 'Minus ' + delta + ' ' + label);
+        const field = document.createElement('label');
+        field.className = 'pl-field';
+        const inp = document.createElement('input');
+        Object.assign(inp, attrs);
+        const unit = document.createElement('span');
+        unit.textContent = unitText;
+        field.appendChild(inp); field.appendChild(unit);
+        const plus = document.createElement('button');
+        plus.className = 'pl-step'; plus.textContent = '+'; plus.setAttribute('aria-label', 'Plus ' + delta + ' ' + label);
+        const step = d => { const v = parseFloat((inp.value || '0').replace(',', '.')) || 0; inp.value = Math.max(0, Math.round((v + d) * 10) / 10); };
+        minus.addEventListener('click', () => step(-delta));
+        plus.addEventListener('click', () => step(delta));
+        inp.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+        addRow.appendChild(minus); addRow.appendChild(field); addRow.appendChild(plus);
+        return inp;
+      };
+      const inp = stepper('kg', { type: 'number', step: '0.5', min: '0', inputMode: 'decimal', placeholder: '0', value: lastEntry ? lastEntry.value : '' }, 2.5, 'kg');
       const btn = document.createElement('button');
       btn.className = 'pl-add';
       btn.textContent = 'Log';
-      const step = d => { const v = parseFloat((inp.value || '0').replace(',', '.')) || 0; inp.value = Math.max(0, Math.round((v + d) * 10) / 10); };
-      minus.addEventListener('click', () => step(-2.5));
-      plus.addEventListener('click', () => step(2.5));
+      addRow.appendChild(btn);
+      const repsInp = stepper('reps', { type: 'number', step: '1', min: '0', inputMode: 'numeric',
+        placeholder: range ? range.lo + (range.hi > range.lo ? '-' + range.hi : '') : '0', value: lastEntry && lastEntry.reps ? lastEntry.reps : '' }, 1, 'rep');
       function submit() {
         const val = parseFloat((inp.value || '').replace(',', '.'));
         if (isNaN(val) || val <= 0) return;
+        const reps = parseInt(repsInp.value, 10);
         const data = { exerciseId: ex.id, value: val, date: Date.now() };
+        if (reps > 0) data.reps = reps;
         if (usingLocal) { allGymPLogs.push({ id: 'gpl' + Date.now() + Math.random(), ...data }); saveLocal(); renderGymProgress(); }
         else gymPLogsCol.add(data).catch(() => {});
       }
       btn.addEventListener('click', submit);
-      inp.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
-      addRow.appendChild(minus); addRow.appendChild(field); addRow.appendChild(plus); addRow.appendChild(btn);
       card.appendChild(addRow);
+      if (range) {
+        const hint = document.createElement('div');
+        hint.className = 'pl-hint';
+        const ready = lastEntry && lastEntry.reps >= range.hi;
+        if (ready) hint.classList.add('up');
+        hint.textContent = ready ? 'Hit ' + lastEntry.reps + ' reps last time (plan ' + planSrc.scheme + '): time to add weight'
+          : 'Plan: ' + planSrc.scheme;
+        card.appendChild(hint);
+      }
       body.appendChild(card);
 
       if (!entries.length) {
@@ -1941,11 +2013,12 @@
         right.style.cssText = 'display:flex;align-items:center;gap:10px';
         const val = document.createElement('span');
         val.className = 'w-value';
-        val.textContent = en.value + ' kg';
+        val.textContent = en.value + ' kg' + (en.reps ? ' × ' + en.reps : '');
         const del = document.createElement('button');
         del.className = 'w-del';
         del.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 4H13M6.5 4V2.7C6.5 2.3 6.8 2 7.2 2H8.8C9.2 2 9.5 2.3 9.5 2.7V4M5 4V12.5C5 13 5.4 13.4 5.9 13.4H10.1C10.6 13.4 11 13 11 12.5V4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
         del.addEventListener('click', () => {
+          offerUndo('Entry deleted', { gymProgressLogs: [en] });
           if (usingLocal) { allGymPLogs = allGymPLogs.filter(x => x.id !== en.id); saveLocal(); renderGymProgress(); }
           else gymPLogsCol.doc(en.id).delete().catch(() => {});
         });
@@ -2014,6 +2087,8 @@
       del.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 4H13M6.5 4V2.7C6.5 2.3 6.8 2 7.2 2H8.8C9.2 2 9.5 2.3 9.5 2.7V4M5 4V12.5C5 13 5.4 13.4 5.9 13.4H10.1C10.6 13.4 11 13 11 12.5V4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       del.addEventListener('click', (e) => {
         e.stopPropagation();
+        // only the local mode removes the exercise's log entries too
+        offerUndo('Exercise deleted', { gymProgressExercises: [ex], gymProgressLogs: usingLocal ? allGymPLogs.filter(x => x.exerciseId === ex.id) : [] });
         if (usingLocal) {
           allGymPEx = allGymPEx.filter(x => x.id !== ex.id);
           allGymPLogs = allGymPLogs.filter(x => x.exerciseId !== ex.id);
@@ -2083,6 +2158,41 @@
     }
   }
 
+  // ---------- undo ----------
+  // Deletes apply at once; Undo in the toast puts the same documents back under the same ids, so links keep working.
+  const undoStores = {
+    tasks: { col: () => tasksCol, get: () => allTasks, set: v => { allTasks = v; } },
+    subtasks: { col: () => subtasksCol, get: () => allSubtasks, set: v => { allSubtasks = v; } },
+    weights: { col: () => weightsCol, get: () => allWeights, set: v => { allWeights = v; } },
+    gymExercises: { col: () => gymExercisesCol, get: () => allGymExercises, set: v => { allGymExercises = v; } },
+    gymProgressExercises: { col: () => gymPExCol, get: () => allGymPEx, set: v => { allGymPEx = v; } },
+    gymProgressLogs: { col: () => gymPLogsCol, get: () => allGymPLogs, set: v => { allGymPLogs = v; } }
+  };
+  const undoToast = document.createElement('div');
+  undoToast.id = 'undo-toast';
+  undoToast.innerHTML = '<span></span><button type="button">Undo</button>';
+  document.body.appendChild(undoToast);
+  let undoTimer = null, undoGroups = null;
+  function offerUndo(label, groups) {   // groups: { collection: [docs] }, taken before the delete
+    undoGroups = JSON.parse(JSON.stringify(groups));
+    undoToast.firstChild.textContent = label;
+    undoToast.classList.add('show');
+    clearTimeout(undoTimer);
+    undoTimer = setTimeout(() => { undoToast.classList.remove('show'); undoGroups = null; }, 5000);
+  }
+  undoToast.lastChild.addEventListener('click', () => {
+    clearTimeout(undoTimer);
+    undoToast.classList.remove('show');
+    const groups = undoGroups; undoGroups = null;
+    if (!groups) return;
+    Object.keys(groups).forEach(name => {
+      const s = undoStores[name], docs = groups[name];
+      if (usingLocal) s.set(s.get().filter(x => !docs.some(d => d.id === x.id)).concat(docs));
+      else docs.forEach(({ id, ...data }) => s.col().doc(id).set(data).catch(() => {}));
+    });
+    if (usingLocal) { saveLocal(); renderAll(); }
+  });
+
   // ---------- task CRUD ----------
   function toggleTask(t) {
     const nowDone = !t.done;
@@ -2096,7 +2206,7 @@
       tasksCol.doc(t.id).update(patch).catch(() => {});
     }
   }
-  window.PAGE_VERSION = '25';
+  window.PAGE_VERSION = '26';
   const MAIN_SECTIONS = ['__root__', '__gym__', '__notes__', '__fin__', '__mand__', '__lvl__', '__terr__', '__ach__'];
   function openSection(key) { MAIN_SECTIONS.forEach(k => { if (k !== key) expanded.delete(k); }); expanded.add(key); }
   window.openSection = openSection;
@@ -2186,6 +2296,7 @@
     }
   }
   function deleteTask(t) {
+    offerUndo('Task deleted', { tasks: [t], subtasks: allSubtasks.filter(s => s.taskId === t.id) });
     if (usingLocal) {
       allTasks = allTasks.filter(x => x.id !== t.id);
       allSubtasks = allSubtasks.filter(s => s.taskId !== t.id);
@@ -2225,6 +2336,7 @@
     }
   }
   function deleteSubtask(s) {
+    offerUndo('Subtask deleted', { subtasks: [s] });
     if (usingLocal) {
       allSubtasks = allSubtasks.filter(x => x.id !== s.id);
       saveLocal();
