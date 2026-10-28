@@ -394,6 +394,27 @@
   :root[data-theme="wayne"] .pl-card, :root[data-theme="wayne"] .lv-hero, :root[data-theme="wayne"] .prof-top, :root[data-theme="wayne"] .t-card,
   :root[data-theme="wayne"] .task { background: linear-gradient(160deg, #16191d, #101215); box-shadow: inset 0 1px 0 rgba(255,255,255,.035); }
 
+  :root[data-theme="fallout"] {
+    --bg: #071a0d; --bg-elevated: #0b2413; --sidebar-bg: #041208; --sidebar-text: #3dff7e; --sidebar-text-dim: #1f9c4a;
+    --sidebar-active: #0f3a1c; --sidebar-hover: #0a2a14; --text: #4dff88; --text-dim: #25a352; --accent: #3dff7e; --accent-soft: #0f3a1c;
+    --border: #1a6b35; --danger: #ffb43d; --popover-bg: #0b2413; color-scheme: dark;
+  }
+  :root[data-theme="fallout"] body { font-family: 'IBM Plex Mono', 'PT Mono', ui-monospace, Menlo, monospace;
+    text-shadow: 0 0 4px rgba(61,255,126,.45);
+    background: radial-gradient(ellipse at 50% 40%, #0e3019 0%, #071a0d 55%, #030a05 100%); }
+  :root[data-theme="fallout"] #main { background: radial-gradient(ellipse at 50% 35%, rgba(40,140,70,.18) 0%, transparent 65%); }
+  :root[data-theme="fallout"] body::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+    background: repeating-linear-gradient(180deg, rgba(0,0,0,.22) 0, rgba(0,0,0,.22) 1px, transparent 1px, transparent 3px); }
+  :root[data-theme="fallout"] *, :root[data-theme="fallout"] *::before, :root[data-theme="fallout"] *::after { border-radius: 0 !important; }
+  :root[data-theme="fallout"] input, :root[data-theme="fallout"] textarea, :root[data-theme="fallout"] select, :root[data-theme="fallout"] button { font-family: inherit; }
+  :root[data-theme="fallout"] #sidebar { box-shadow: inset -1px 0 0 #1a6b35; }
+  :root[data-theme="fallout"] .x-title, :root[data-theme="fallout"] .pl-title, :root[data-theme="fallout"] .prof-info h1,
+  :root[data-theme="fallout"] .crumb.current, :root[data-theme="fallout"] #sidebar-title { letter-spacing: .08em; text-transform: uppercase; }
+  :root[data-theme="fallout"] #add-btn, :root[data-theme="fallout"] #weight-add-btn, :root[data-theme="fallout"] .x-btn.primary,
+  :root[data-theme="fallout"] .tab-btn.active, :root[data-theme="fallout"] .pl-add, :root[data-theme="fallout"] .sync-actions button.primary,
+  :root[data-theme="fallout"] .prof-cam, :root[data-theme="fallout"] button[style*="var(--accent)"] { color: #041208 !important; text-shadow: none; }
+  :root[data-theme="fallout"] ::selection { background: #3dff7e; color: #041208; }
+
   /* background image setting */
   body.has-bgimg #main { background: var(--bg); }
   #bg-layer { opacity: var(--bg-img-op, .16); }
@@ -3424,7 +3445,8 @@
     { id: 'dark', name: 'Dark', c: ['#121317', '#191b20', '#0e0f12', '#3f5fd6'] },
     { id: 'blood', name: 'Blood', c: ['#0b0b0c', '#141416', '#060607', '#c8102e'] },
     { id: 'skyrim', name: 'Skyrim', c: ['#16140f', '#201d17', '#0e0d0a', '#b8975a'] },
-    { id: 'wayne', name: 'Bruce Wayne', c: ['#0a0b0d', '#16191d', '#050607', '#9fb0c3'] }
+    { id: 'wayne', name: 'Bruce Wayne', c: ['#0a0b0d', '#16191d', '#050607', '#9fb0c3'] },
+    { id: 'fallout', name: 'Fallout', c: ['#071a0d', '#0b2413', '#041208', '#3dff7e'] }
   ];
   function applyTheme(id) {
     if (id) document.documentElement.setAttribute('data-theme', id); else document.documentElement.removeAttribute('data-theme');
@@ -3434,12 +3456,17 @@
       l.href = 'https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Jost:wght@400;500;600;700&display=swap';
       document.head.appendChild(l);
     }
+    if (id === 'fallout' && !document.getElementById('fallout-fonts')) {
+      const l = document.createElement('link'); l.id = 'fallout-fonts'; l.rel = 'stylesheet';
+      l.href = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap';
+      document.head.appendChild(l);
+    }
     const t = THEMES.find(x => x.id === id);
     document.querySelectorAll('meta[name="theme-color"]').forEach(m => { if (t) m.setAttribute('content', t.c[0]); else m.setAttribute('content', m.media && m.media.includes('dark') ? '#121317' : '#f6f5f2'); });
   }
   applyTheme((() => { try { return localStorage.getItem('tgr_theme'); } catch (e) { return null; } })());
 
-  const APP_VERSION = '26';
+  const APP_VERSION = '27';
   async function checkForUpdates(btn, msg) {
     btn.disabled = true; btn.textContent = 'Checking...';
     try {
