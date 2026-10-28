@@ -1,8 +1,8 @@
 // Offline cache. Bump VERSION after changing app files so devices pick up the update.
-const VERSION = 'tgrapp-v26';
+const VERSION = 'tgrapp-v27';
 const FILES = ['./', './index.html', './sync-db.js', './extras.js', './xlsx.full.min.js', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
-const OPTIONAL = ['./tgr-widget.js'];   // nice to have offline, but a missing one must not block the update
+const OPTIONAL = ['./tgr-widget.js', './fonts/tiny5-latin.woff2', './fonts/tiny5-cyr.woff2', './fonts/ptmono-latin.woff2', './fonts/ptmono-cyr.woff2'];   // nice to have offline, but a missing one must not block the update
 
 // Skip the browser's HTTP cache on install, otherwise a new VERSION can still pick up stale files.
 const fresh = f => new Request(f, { cache: 'reload' });

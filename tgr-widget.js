@@ -13,7 +13,17 @@ const LOOKS = {
   dark: { bg: '#121317', bg2: '#1b1d23', text: '#eceef1', dim: '#8b8d93', accent: '#5b78e6', danger: '#ef6a6a' },
   blood: { bg: '#0b0b0c', bg2: '#1a1a1d', text: '#ececee', dim: '#8a8a90', accent: '#e0263f', danger: '#ff6b6b' },
   skyrim: { bg: '#16140f', bg2: '#2b2518', text: '#ede5d1', dim: '#a59c86', accent: '#c4a468', danger: '#d9644a' },
-  wayne: { bg: '#0a0b0d', bg2: '#1a1e24', text: '#e4e7eb', dim: '#868c95', accent: '#9fb0c3', danger: '#d9534f' }
+  wayne: { bg: '#0a0b0d', bg2: '#1a1e24', text: '#e4e7eb', dim: '#868c95', accent: '#9fb0c3', danger: '#d9534f' },
+  fallout: { bg: '#04100a', bg2: '#0a2615', text: '#3cff78', dim: '#23a04c', accent: '#3cff78', danger: '#ff5d3c', mono: true }
+};
+// Fonts follow the look: Fallout swaps every font for the terminal monospace.
+let MONO = false;
+const FT = {
+  r: n => MONO ? Font.regularMonospacedSystemFont(n) : Font.systemFont(n),
+  m: n => MONO ? Font.mediumMonospacedSystemFont(n) : Font.mediumSystemFont(n),
+  s: n => MONO ? Font.semiboldMonospacedSystemFont(n) : Font.semiboldSystemFont(n),
+  b: n => MONO ? Font.boldMonospacedSystemFont(n) : Font.boldSystemFont(n),
+  br: n => MONO ? Font.boldMonospacedSystemFont(n) : Font.boldRoundedSystemFont(n)
 };
 
 const fm = FileManager.local();
@@ -104,6 +114,7 @@ function folderTree(d) {
 // ---------- look ----------
 function colors(look) {
   const P = LOOKS[look];
+  MONO = !!(P && P.mono);
   if (P) return { bg: new Color(P.bg), bg2: new Color(P.bg2), text: new Color(P.text), dim: new Color(P.dim), accent: new Color(P.accent), danger: new Color(P.danger), fixed: true };
   const L = LOOKS.light, D = LOOKS.dark, dy = k => Color.dynamic(new Color(L[k]), new Color(D[k]));
   return { bg: dy('bg'), bg2: dy('bg2'), text: dy('text'), dim: dy('dim'), accent: dy('accent'), danger: dy('danger'), fixed: false };
@@ -137,17 +148,17 @@ function homeWidget(fam, res) {
   const list = d ? pick(d) : [];
   const h = w.addStack(); h.centerAlignContent(); h.spacing = 5;
   const ic = h.addImage(sym('checklist', 13, true)); ic.imageSize = new Size(15, 15); ic.tintColor = C.accent;
-  txt(h, 'ToDo', Font.boldSystemFont(big ? 16 : 14), C.text);
-  if (!small && d) { const sc = txt(h, scopeName(d), Font.mediumSystemFont(11), C.dim); sc.textOpacity = 0.9; }
+  txt(h, 'ToDo', FT.b(big ? 16 : 14), C.text);
+  if (!small && d) { const sc = txt(h, scopeName(d), FT.m(11), C.dim); sc.textOpacity = 0.9; }
   if (d && !res.live) { const off = h.addImage(sym('icloud.slash', 10)); off.imageSize = new Size(13, 11); off.tintColor = C.dim; }
   h.addSpacer();
-  if (d) txt(h, String(list.length), Font.boldRoundedSystemFont(big ? 16 : 14), C.accent);
+  if (d) txt(h, String(list.length), FT.br(big ? 16 : 14), C.accent);
   w.addSpacer(big ? 10 : small ? 7 : 8);
 
   if (!d) {
-    txt(w, res.err === 'net' ? 'No data yet' : 'Setup needed', Font.semiboldSystemFont(13), C.text);
+    txt(w, res.err === 'net' ? 'No data yet' : 'Setup needed', FT.s(13), C.text);
     w.addSpacer(3);
-    txt(w, ERR[res.err] || ERR.net, Font.systemFont(11), C.dim, 4);
+    txt(w, ERR[res.err] || ERR.net, FT.r(11), C.dim, 4);
     w.addSpacer();
     return w;
   }
@@ -155,7 +166,7 @@ function homeWidget(fam, res) {
     w.addSpacer();
     const e = w.addStack(); e.centerAlignContent(); e.spacing = 6;
     const ok = e.addImage(sym('checkmark.circle.fill', 16)); ok.imageSize = new Size(18, 18); ok.tintColor = C.accent;
-    txt(e, 'All done', Font.semiboldSystemFont(14), C.text);
+    txt(e, 'All done', FT.s(14), C.text);
     w.addSpacer();
     return w;
   }
@@ -166,26 +177,27 @@ function homeWidget(fam, res) {
     const r = rows.addStack(); r.centerAlignContent(); r.spacing = 6;
     const dot = r.addStack(); dot.size = new Size(7, 7); dot.cornerRadius = 3.5; dot.backgroundColor = new Color(prio(t)[0]);
     const u = due(t);
-    txt(r, t.text, Font.systemFont(fs), u && u.late ? C.danger : C.text);
+    txt(r, t.text, FT.r(fs), u && u.late ? C.danger : C.text);
     r.addSpacer();
-    if (!small && u) txt(r, u.s, Font.mediumSystemFont(fs - 2), u.hot ? C.danger : C.dim);
+    if (!small && u) txt(r, u.s, FT.m(fs - 2), u.hot ? C.danger : C.dim);
   });
   if (list.length > shown) {
     rows.addSpacer(1);
-    const m = txt(rows, '+' + (list.length - shown) + ' more', Font.mediumSystemFont(fs - 2), C.dim);
+    const m = txt(rows, '+' + (list.length - shown) + ' more', FT.m(fs - 2), C.dim);
     m.textOpacity = 0.9;
   }
   w.addSpacer();
   if (big) {
     const f = w.addStack(); f.addSpacer();
     const at = res.at ? new Date(res.at) : new Date();
-    txt(f, (res.live ? 'Updated ' : 'Offline, from ') + pad2(at.getHours()) + ':' + pad2(at.getMinutes()), Font.systemFont(10), C.dim);
+    txt(f, (res.live ? 'Updated ' : 'Offline, from ') + pad2(at.getHours()) + ':' + pad2(at.getMinutes()), FT.r(10), C.dim);
   }
   return w;
 }
 
 // ---------- Lock Screen ----------
 function lockWidget(fam, res) {
+  const LK = res.d && LOOKS[res.d.widget.look]; MONO = !!(LK && LK.mono);
   const d = res.d, list = d ? pick(d) : [];
   const w = new ListWidget();
   if (fam === 'accessoryInline') {
@@ -197,16 +209,16 @@ function lockWidget(fam, res) {
     w.addAccessoryWidgetBackground = true;
     w.addSpacer();
     const im = w.addImage(sym(list.length ? 'checklist' : 'checkmark', 12, true)); im.imageSize = new Size(15, 15); im.centerAlignImage();
-    const n = txt(w, d ? String(list.length) : '–', Font.boldRoundedSystemFont(20)); n.centerAlignText(); n.minimumScaleFactor = 0.6;
+    const n = txt(w, d ? String(list.length) : '–', FT.br(20)); n.centerAlignText(); n.minimumScaleFactor = 0.6;
     w.addSpacer();
     return w;
   }
   // accessoryRectangular: three most important tasks
-  if (!d) { txt(w, 'TGRAPP', Font.semiboldSystemFont(13)); txt(w, res.err === 'net' ? 'No data yet, no internet' : 'Tap to finish setup', Font.systemFont(12), null, 2); return w; }
+  if (!d) { txt(w, 'TGRAPP', FT.s(13)); txt(w, res.err === 'net' ? 'No data yet, no internet' : 'Tap to finish setup', FT.r(12), null, 2); return w; }
   if (!list.length) {
     const r = w.addStack(); r.centerAlignContent(); r.spacing = 5;
     const ok = r.addImage(sym('checkmark.circle.fill', 13)); ok.imageSize = new Size(15, 15);
-    txt(r, 'All done', Font.semiboldSystemFont(14));
+    txt(r, 'All done', FT.s(14));
     return w;
   }
   w.spacing = 2;
@@ -215,9 +227,9 @@ function lockWidget(fam, res) {
     const u = due(t);
     const name = u && u.hot ? 'exclamationmark.circle.fill' : (t.priority || 0) >= 1 ? 'circle.fill' : 'circle';
     const im = r.addImage(sym(name, 9, true)); im.imageSize = new Size(11, 11);
-    txt(r, t.text, i === 0 ? Font.semiboldSystemFont(13.5) : Font.systemFont(13.5));
+    txt(r, t.text, i === 0 ? FT.s(13.5) : FT.r(13.5));
     r.addSpacer();
-    if (i === 2 && list.length > 3) { const m = txt(r, '+' + (list.length - 3), Font.semiboldSystemFont(12)); m.textOpacity = 0.75; }
+    if (i === 2 && list.length > 3) { const m = txt(r, '+' + (list.length - 3), FT.s(12)); m.textOpacity = 0.75; }
   });
   return w;
 }

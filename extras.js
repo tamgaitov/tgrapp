@@ -394,6 +394,98 @@
   :root[data-theme="wayne"] .pl-card, :root[data-theme="wayne"] .lv-hero, :root[data-theme="wayne"] .prof-top, :root[data-theme="wayne"] .t-card,
   :root[data-theme="wayne"] .task { background: linear-gradient(160deg, #16191d, #101215); box-shadow: inset 0 1px 0 rgba(255,255,255,.035); }
 
+  /* fallout: RobCo terminal */
+  @font-face { font-family: 'Tiny5'; src: url('fonts/tiny5-latin.woff2') format('woff2'); font-display: swap;
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212; }
+  @font-face { font-family: 'Tiny5'; src: url('fonts/tiny5-cyr.woff2') format('woff2'); font-display: swap; unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+  @font-face { font-family: 'PT Mono'; src: url('fonts/ptmono-latin.woff2') format('woff2'); font-display: swap;
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212; }
+  @font-face { font-family: 'PT Mono'; src: url('fonts/ptmono-cyr.woff2') format('woff2'); font-display: swap; unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+  :root[data-theme="fallout"] {
+    --fo: #3cff78; --fo-dim: #22a24c; --fo-glow: rgba(60,255,120,.45);
+    --bg: #04100a; --bg-elevated: #071a0f; --sidebar-bg: #030c07; --sidebar-text: #3cff78; --sidebar-text-dim: #1f8f45;
+    --sidebar-active: #0c2b17; --sidebar-hover: #08200f; --text: #3cff78; --text-dim: #23a04c; --accent: #3cff78; --accent-soft: #0b2c17;
+    --border: #145a2b; --danger: #ff5d3c; --popover-bg: #061710; color-scheme: dark;
+  }
+  :root[data-theme="fallout"] body { font-family: 'PT Mono', ui-monospace, Menlo, monospace; text-shadow: 0 0 5px var(--fo-glow);
+    background: radial-gradient(ellipse at 50% 35%, #0a2615 0%, #04100a 65%, #020804 100%); }
+  :root[data-theme="fallout"] #main, :root[data-theme="fallout"] #sidebar { background: transparent; }
+  :root[data-theme="fallout"] #sidebar { box-shadow: inset -1px 0 0 var(--border); background: rgba(2,10,5,.55); }
+  /* scanlines + vignette over everything, taps pass through */
+  :root[data-theme="fallout"] body::after { content: ''; position: fixed; inset: 0; z-index: 9999; pointer-events: none;
+    background: repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0, rgba(0,0,0,0) 2px, rgba(0,0,0,.22) 3px, rgba(0,0,0,0) 4px),
+      radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0,0,0,.55) 100%);
+    animation: fo-flicker 6s infinite steps(1); }
+  @keyframes fo-flicker { 0%, 100% { opacity: 1; } 47% { opacity: .85; } 48% { opacity: 1; } 81% { opacity: .9; } 82% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { :root[data-theme="fallout"] body::after { animation: none; } }
+  :root[data-theme="fallout"] *, :root[data-theme="fallout"] *::before { border-radius: 0 !important; }
+  :root[data-theme="fallout"] input, :root[data-theme="fallout"] textarea, :root[data-theme="fallout"] select,
+  :root[data-theme="fallout"] button, :root[data-theme="fallout"] [contenteditable] { font-family: inherit; caret-color: var(--fo); text-shadow: inherit; }
+  :root[data-theme="fallout"] ::selection { background: var(--fo); color: #04100a; text-shadow: none; }
+  :root[data-theme="fallout"] ::placeholder { color: var(--fo-dim) !important; opacity: .8; }
+  :root[data-theme="fallout"] svg { filter: drop-shadow(0 0 3px var(--fo-glow)); }
+  /* headings and labels: pixel font, caps */
+  :root[data-theme="fallout"] .x-title, :root[data-theme="fallout"] .pl-title, :root[data-theme="fallout"] .a-m-name,
+  :root[data-theme="fallout"] .crumb, :root[data-theme="fallout"] #sidebar-title, :root[data-theme="fallout"] .tab-btn,
+  :root[data-theme="fallout"] .n-title, :root[data-theme="fallout"] .prof-info h1, :root[data-theme="fallout"] .lv-card-name,
+  :root[data-theme="fallout"] .th-card b, :root[data-theme="fallout"] .x-btn, :root[data-theme="fallout"] .pl-add,
+  :root[data-theme="fallout"] #add-btn, :root[data-theme="fallout"] #weight-add-btn, :root[data-theme="fallout"] .sync-actions button,
+  :root[data-theme="fallout"] .tree-row .row-name, :root[data-theme="fallout"] h1, :root[data-theme="fallout"] h2, :root[data-theme="fallout"] h3 {
+    font-family: 'Tiny5', 'PT Mono', monospace; font-weight: 400 !important; letter-spacing: .06em; text-transform: uppercase; }
+  :root[data-theme="fallout"] .x-title, :root[data-theme="fallout"] .n-title { font-size: 26px; }
+  /* buttons: outlined, light up when pressed/selected like the terminal cursor */
+  :root[data-theme="fallout"] button { box-shadow: none !important; }
+  :root[data-theme="fallout"] .x-btn, :root[data-theme="fallout"] .tab-btn, :root[data-theme="fallout"] .sync-actions button {
+    background: transparent; border: 1px solid var(--fo); color: var(--fo); }
+  :root[data-theme="fallout"] #add-btn, :root[data-theme="fallout"] #weight-add-btn, :root[data-theme="fallout"] .x-btn.primary,
+  :root[data-theme="fallout"] .tab-btn.active, :root[data-theme="fallout"] .pl-add, :root[data-theme="fallout"] .sync-actions button.primary,
+  :root[data-theme="fallout"] .prof-cam, :root[data-theme="fallout"] .inline-form-row button, :root[data-theme="fallout"] button[style*="var(--accent)"] {
+    background: var(--fo) !important; color: #04100a !important; text-shadow: none !important; border-color: var(--fo) !important; }
+  @media (hover: hover) {
+    :root[data-theme="fallout"] .x-btn:hover, :root[data-theme="fallout"] .tab-btn:hover, :root[data-theme="fallout"] .tree-row:hover,
+    :root[data-theme="fallout"] .crumb:hover, :root[data-theme="fallout"] #n-menu button:hover, :root[data-theme="fallout"] .th-card:hover {
+      background: var(--fo) !important; color: #04100a !important; text-shadow: none; }
+    :root[data-theme="fallout"] .tree-row:hover *, :root[data-theme="fallout"] .x-btn:hover * { color: #04100a !important; }
+  }
+  :root[data-theme="fallout"] .x-btn:active, :root[data-theme="fallout"] .tab-btn:active, :root[data-theme="fallout"] .tree-row:active,
+  :root[data-theme="fallout"] #n-menu button:active { background: var(--fo) !important; color: #04100a !important; text-shadow: none; }
+  :root[data-theme="fallout"] .tree-row.active, :root[data-theme="fallout"] .tree-row.selected { background: var(--fo) !important; }
+  :root[data-theme="fallout"] .tree-row.active *, :root[data-theme="fallout"] .tree-row.selected * { color: #04100a !important; text-shadow: none; }
+  :root[data-theme="fallout"] .tree-row.active svg, :root[data-theme="fallout"] .tree-row.selected svg { filter: none; }
+  :root[data-theme="fallout"] .tree-row .row-name::before { content: '>'; margin-right: .35em; opacity: 0; }
+  :root[data-theme="fallout"] .tree-row.active .row-name::before, :root[data-theme="fallout"] .tree-row.selected .row-name::before { opacity: 1; }
+  /* cards and panels: thin phosphor frames */
+  :root[data-theme="fallout"] .task, :root[data-theme="fallout"] .pl-card, :root[data-theme="fallout"] .t-card, :root[data-theme="fallout"] .t-stats,
+  :root[data-theme="fallout"] .a-card, :root[data-theme="fallout"] .lv-card, :root[data-theme="fallout"] .lv-hero, :root[data-theme="fallout"] .prof-top,
+  :root[data-theme="fallout"] .prof-lv, :root[data-theme="fallout"] .a-m-card, :root[data-theme="fallout"] #sync-card, :root[data-theme="fallout"] .th-card {
+    background: rgba(6,26,14,.6); border: 1px solid var(--border); }
+  :root[data-theme="fallout"] .a-m-card, :root[data-theme="fallout"] #sync-card { background: #041209; box-shadow: 0 0 0 1px var(--fo), 0 0 24px rgba(60,255,120,.12) !important; }
+  :root[data-theme="fallout"] .prof-av-empty { background: #0b2c17 !important; color: var(--fo) !important; border: 1px solid var(--fo); }
+  :root[data-theme="fallout"] .th-card.on { border-color: var(--fo); box-shadow: inset 0 0 0 1px var(--fo) !important; }
+  :root[data-theme="fallout"] input, :root[data-theme="fallout"] textarea, :root[data-theme="fallout"] select {
+    background: rgba(3,14,8,.8) !important; color: var(--fo) !important; border-color: var(--border) !important; }
+  :root[data-theme="fallout"] input:focus, :root[data-theme="fallout"] textarea:focus, :root[data-theme="fallout"] select:focus { border-color: var(--fo) !important; }
+  :root[data-theme="fallout"] input[type="checkbox"], :root[data-theme="fallout"] input[type="radio"] { accent-color: var(--fo); }
+  /* menus and floating bars were hard-coded light-on-grey */
+  :root[data-theme="fallout"] #n-menu, :root[data-theme="fallout"] .n-tb, :root[data-theme="fallout"] .n-size {
+    background: #04140a !important; border: 1px solid var(--fo) !important; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  :root[data-theme="fallout"] #n-menu button, :root[data-theme="fallout"] .n-tb button, :root[data-theme="fallout"] .n-size { color: var(--fo) !important; }
+  :root[data-theme="fallout"] #n-menu button.danger, :root[data-theme="fallout"] .n-tb button.danger { color: var(--danger) !important; }
+  :root[data-theme="fallout"] .n-tb button.on { background: var(--fo) !important; color: #04100a !important; }
+  :root[data-theme="fallout"] .n-h { background: #04100a; border-color: var(--fo); }
+  :root[data-theme="fallout"] #set-modal, :root[data-theme="fallout"] .modal, :root[data-theme="fallout"] [id$="-modal"] { background: rgba(0,6,2,.75); }
+  /* photos look like they're on the monitor */
+  :root[data-theme="fallout"] .n-img img, :root[data-theme="fallout"] .prof-avatar img {
+    filter: grayscale(1) sepia(1) hue-rotate(70deg) saturate(2.6) brightness(.95) contrast(1.1); }
+  :root[data-theme="fallout"] .row-more:hover { background: transparent; color: inherit; }
+  /* boot screen shown when the theme is picked */
+  #fo-boot { position: fixed; inset: 0; z-index: 10000; background: #030c07; color: #3cff78; text-shadow: 0 0 6px rgba(60,255,120,.55);
+    font: 15px/1.5 'PT Mono', ui-monospace, monospace; padding: max(48px, env(safe-area-inset-top)) 22px 22px; white-space: pre-wrap;
+    transition: opacity .35s; cursor: pointer; }
+  #fo-boot .h { font-family: 'Tiny5', 'PT Mono', monospace; font-size: 18px; letter-spacing: .05em; text-align: center; display: block; }
+  #fo-boot .c { display: inline-block; width: .6em; height: 1.1em; background: #3cff78; vertical-align: -.2em; animation: fo-blink 1s steps(1) infinite; }
+  @keyframes fo-blink { 50% { opacity: 0; } }
+
   /* background image setting */
   body.has-bgimg #main { background: var(--bg); }
   #bg-layer { opacity: var(--bg-img-op, .16); }
@@ -3424,7 +3516,8 @@
     { id: 'dark', name: 'Dark', c: ['#121317', '#191b20', '#0e0f12', '#3f5fd6'] },
     { id: 'blood', name: 'Blood', c: ['#0b0b0c', '#141416', '#060607', '#c8102e'] },
     { id: 'skyrim', name: 'Skyrim', c: ['#16140f', '#201d17', '#0e0d0a', '#b8975a'] },
-    { id: 'wayne', name: 'Bruce Wayne', c: ['#0a0b0d', '#16191d', '#050607', '#9fb0c3'] }
+    { id: 'wayne', name: 'Bruce Wayne', c: ['#0a0b0d', '#16191d', '#050607', '#9fb0c3'] },
+    { id: 'fallout', name: 'Fallout', c: ['#04100a', '#071a0f', '#030c07', '#3cff78'] }
   ];
   function applyTheme(id) {
     if (id) document.documentElement.setAttribute('data-theme', id); else document.documentElement.removeAttribute('data-theme');
@@ -3437,9 +3530,26 @@
     const t = THEMES.find(x => x.id === id);
     document.querySelectorAll('meta[name="theme-color"]').forEach(m => { if (t) m.setAttribute('content', t.c[0]); else m.setAttribute('content', m.media && m.media.includes('dark') ? '#121317' : '#f6f5f2'); });
   }
+  // RobCo boot text, typed out once when Fallout is picked. Tap to skip.
+  function foBoot() {
+    if (document.getElementById('fo-boot')) return;
+    const el = document.createElement('div'); el.id = 'fo-boot';
+    const head = 'ROBCO INDUSTRIES UNIFIED OPERATING SYSTEM\nCOPYRIGHT 2075-2077 ROBCO INDUSTRIES\n-Server 1-';
+    const lines = ['', '', '> SET TERMINAL/INQUIRE', 'RIT-V300', '', '> SET FILE/PROTECTION=OWNER:RWED ACCOUNTS.F', '> SET HALT RESTART/MAINT', '',
+      'Initializing Robco Industries(TM) MF Boot Agent v2.3.0', 'RETROS BIOS', 'RBIOS-4.02.08.00 52EE5.E7.E8', 'Uppermem: 64 KB', 'Root (5A8)', 'Maintenance Mode', '',
+      '> RUN DEBUG/TGRAPP.SYS', '', 'WELCOME, OVERSEER.'];
+    el.innerHTML = '<span class="h"></span><span class="b"></span><span class="c"></span>';
+    el.querySelector('.h').textContent = head;
+    document.body.appendChild(el);
+    const out = el.querySelector('.b'), text = lines.join('\n');
+    let i = 0, done = false;
+    const close = () => { if (done) return; done = true; clearInterval(tm); el.style.opacity = '0'; setTimeout(() => el.remove(), 380); };
+    const tm = setInterval(() => { i += 3; out.textContent = text.slice(0, i); if (i >= text.length) { clearInterval(tm); setTimeout(close, 700); } }, 16);
+    el.addEventListener('click', close);
+  }
   applyTheme((() => { try { return localStorage.getItem('tgr_theme'); } catch (e) { return null; } })());
 
-  const APP_VERSION = '26';
+  const APP_VERSION = '27';
   async function checkForUpdates(btn, msg) {
     btn.disabled = true; btn.textContent = 'Checking...';
     try {
@@ -3504,7 +3614,7 @@
     THEMES.forEach(t => {
       const b = el('button', 'th-card' + (cur === t.id ? ' on' : ''));
       b.innerHTML = `<span class="th-prev" style="background:${t.c[0]}"><i style="background:${t.c[2]}"></i><em style="background:${t.c[1]}"><u style="background:${t.c[3]}"></u></em></span><b>${t.name}</b>`;
-      b.addEventListener('click', () => { applyTheme(t.id); openSettings(); });
+      b.addEventListener('click', () => { const was = document.documentElement.getAttribute('data-theme'); applyTheme(t.id); openSettings(); if (t.id === 'fallout' && was !== 'fallout') foBoot(); });
       grid.appendChild(b);
     });
     setModal.querySelector('.th-system').addEventListener('click', () => { applyTheme(null); openSettings(); });
@@ -3526,7 +3636,7 @@
   // iPhone gives widgets only to native apps, so the widget is a Scriptable script that reads the same data.json from GitHub.
   // The app hands over the script with the sync settings filled in; folders and look live in appSettings/widget (synced),
   // so the widget picks up changes by itself.
-  const WG_LOOKS = [['auto', 'Match iPhone'], ['light', 'Light'], ['dark', 'Dark'], ['blood', 'Blood'], ['skyrim', 'Skyrim'], ['wayne', 'Bruce Wayne']];
+  const WG_LOOKS = [['auto', 'Match iPhone'], ['light', 'Light'], ['dark', 'Dark'], ['blood', 'Blood'], ['skyrim', 'Skyrim'], ['wayne', 'Bruce Wayne'], ['fallout', 'Fallout']];
   let wgScript = null;
   function loadWidgetScript() {
     if (wgScript) return Promise.resolve(wgScript);
