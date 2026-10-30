@@ -1612,24 +1612,48 @@
 
   // ---------- gym page ----------
   const GYM_DAYS = [
-    { id: 'mon', label: 'Monday' },
-    { id: 'wed', label: 'Wednesday' },
-    { id: 'fri', label: 'Friday' }
+    { id: 'mon', label: 'Пн · A' },
+    { id: 'tue', label: 'Вт · турник' },
+    { id: 'wed', label: 'Ср · B' },
+    { id: 'thu', label: 'Чт · турник' },
+    { id: 'fri', label: 'Пт · C' }
+  ];
+  // [name, scheme, old names whose Progress history this exercise keeps]
+  const PULLUP_DAY = [
+    ['Подтягивания', '3x(макс−1); если <5 — негативы 3x5'], ['Подъём ног в висе', '3x10-15']
   ];
   const DEFAULT_GYM_EXERCISES = {
     mon: [
-      ['Жим лежа', '4x6-8'], ['Бабочка', '4x10-12'], ['Тяга широким хватом', '4x6-8'],
-      ['Горизонтальная тяга блока', '4x6-8'], ['Жим над головой', '4x6-8'],
-      ['Руки на трицепс', '4x10-12'], ['Разгибание ног в тренажере', '4x10-12']
+      ['Приседания со штангой', '4x6-8'], ['Жим штанги лёжа', '4x6-8', ['Жим лежа']],
+      ['Тяга верхнего блока широким хватом', '3x8-10', ['Тяга широким хватом']],
+      ['Сгибание ног в тренажёре', '3x10-12'], ['Махи гантелями в стороны', '3x12-15'],
+      ['Трицепс на блоке', '3x10-12', ['Руки на трицепс']]
     ],
+    tue: PULLUP_DAY,
     wed: [
-      ['Хаммер на грудь', '2x8-10'], ['Приседания со штангой', '4x6-8'], ['Жим над головой', '2x8-10'],
-      ['Гантели на бицепс', '2x8-10'], ['Руки на трицепс', '2x10-12'], ['Гиперэкстензия', '4x10-12']
+      ['Жим гантелей сидя', '3x8-10'], ['Горизонтальная тяга блока', '4x8-10'],
+      ['Жим в хаммере', '3x8-10', ['Хаммер на грудь']], ['Сгибание ног в тренажёре', '4x10-12'],
+      ['Разгибание ног', '3x10-12', ['Разгибание ног в тренажере']],
+      ['Бицепс с гантелями', '3x10-12', ['Гантели на бицепс']], ['Икры: подъём на носки', '3x12-15']
     ],
+    thu: PULLUP_DAY,
     fri: [
-      ['Жим гантелей на наклонной', '4x6-8'], ['Горизонтальная тяга с упором в грудь', '4x8-10'],
-      ['Тяга блока узким хватом', '4x6-10'], ['Штанга на бицепс', '4x6-8'],
-      ['Руки на трицепс', '4x10-12'], ['Разгибание ног в тренажере', '4x10-12'], ['Гиперэкстензия', '4x10-12']
+      ['Жим ногами', '4x8-10'], ['Жим гантелей на наклонной', '4x8-10'],
+      ['Тяга с упором в грудь', '4x8-10', ['Горизонтальная тяга с упором в грудь']],
+      ['Махи гантелями в стороны', '3x12-15'], ['Бицепс со штангой', '3x8-10', ['Штанга на бицепс']],
+      ['Трицепс на блоке', '3x10-12', ['Руки на трицепс']], ['Икры: подъём на носки', '3x12-15']
+    ]
+  };
+  const GYM_PLAN_VERSION = 2;
+  const GYM_PLAN_NOTES = {
+    mon: '~60 мин', wed: '~60 мин', fri: '~65 мин', tue: 'по желанию, 10–15 мин', thu: 'по желанию, 10–15 мин',
+    rules: [
+      'Каждый рабочий подход — за 1–2 повтора до отказа.',
+      'Прогрессия: если во всех подходах сделал верх диапазона — +2,5 кг на штангу или гантели на шаг тяжелее.',
+      'Отдых: первые 2–3 упражнения 2–3 мин, остальные 1–1,5 мин.',
+      'Разминка: 5 мин кардио, потом 2–3 лёгких подхода в первом упражнении.',
+      'Записывай веса и повторы. Пропустил день — сдвигай график, но между тренировками минимум день отдыха.',
+      'Питание: 2800–3000 ккал, белок 110–140 г. Вес стоит 2 недели — +200–300 ккал.'
     ]
   };
 
@@ -1648,18 +1672,24 @@
   let planEditing = false;        // Plan "Edit" mode: link exercises to Progress, delete them
   let gymSeeded = false;
 
+  // Seeds the default plan and replaces exercises from an older plan with it. Runs on every snapshot,
+  // since an older plan can still arrive from sync later. Ids are fixed so devices doing it at the same
+  // time converge. Progress exercises and their logs are left alone.
   function seedGymExercisesIfEmpty() {
-    if (gymSeeded) return;
-    if (allGymExercises.length) { gymSeeded = true; return; }
+    const stale = allGymExercises.filter(e => e.plan !== GYM_PLAN_VERSION);
+    if (usingLocal) allGymExercises = allGymExercises.filter(e => e.plan === GYM_PLAN_VERSION);
+    else stale.forEach(e => gymExercisesCol.doc(e.id).delete().catch(() => {}));
+    const seed = !gymSeeded && !allGymExercises.some(e => e.plan === GYM_PLAN_VERSION);
     gymSeeded = true;
-    GYM_DAYS.forEach(day => {
-      DEFAULT_GYM_EXERCISES[day.id].forEach(([name, scheme], i) => {
-        const data = { day: day.id, name, scheme, order: (i + 1) * 1000 };
-        if (usingLocal) allGymExercises.push({ id: 'ge' + Date.now() + Math.random(), ...data });
-        else gymExercisesCol.add(data).catch(() => {});
+    if (seed) GYM_DAYS.forEach(day => {
+      DEFAULT_GYM_EXERCISES[day.id].forEach(([name, scheme, aliases], i) => {
+        const id = 'plan' + GYM_PLAN_VERSION + '-' + day.id + '-' + (i + 1);
+        const data = { day: day.id, name, scheme, order: (i + 1) * 1000, plan: GYM_PLAN_VERSION, aliases: aliases || [] };
+        if (usingLocal) allGymExercises.push({ id, ...data });
+        else gymExercisesCol.doc(id).set(data).catch(() => {});
       });
     });
-    if (usingLocal) { saveLocal(); if (currentPage === 'gym') renderGymPage(); }
+    if (usingLocal && (seed || stale.length)) { saveLocal(); if (currentPage === 'gym') renderGymPage(); }
   }
 
   function navigateGymTab(tab) {
@@ -1678,7 +1708,9 @@
     return m ? { lo: +m[1], hi: +(m[2] || m[1]) } : null;
   }
   function linkedProgressEx(planEx) {
-    return allGymPEx.find(e => e.id === planEx.progressId) || allGymPEx.find(e => exKey(e.name) === exKey(planEx.name));
+    const names = [planEx.name, ...(planEx.aliases || [])].map(exKey);
+    return allGymPEx.find(e => e.id === planEx.progressId) ||
+      names.map(n => allGymPEx.find(e => exKey(e.name) === n)).find(Boolean);
   }
   function addProgressEx(name, then) {
     const data = { name, order: Date.now() };
@@ -1714,7 +1746,7 @@
   }
   function buildPlanLinkPicker(planEx) {
     const pexList = allGymPEx.slice().sort((a, b) => (a.order || 0) - (b.order || 0));
-    const byName = pexList.find(p => exKey(p.name) === exKey(planEx.name));
+    const byName = linkedProgressEx({ ...planEx, progressId: null });
     const wrap = document.createElement('label');
     wrap.className = 'plan-link';
     wrap.textContent = 'Progress';
@@ -1798,7 +1830,7 @@
         const name = nameInp.value.trim();
         if (!name) return;
         const scheme = schemeInp.value.trim();
-        const data = { day: currentPlanDay, name, scheme, order: Date.now() };
+        const data = { day: currentPlanDay, name, scheme, order: Date.now(), plan: GYM_PLAN_VERSION };
         if (usingLocal) { allGymExercises.push({ id: 'ge' + Date.now() + Math.random(), ...data }); saveLocal(); renderGymPage(); }
         else gymExercisesCol.add(data).catch(() => {});
         formHolder.innerHTML = '';
@@ -1857,6 +1889,16 @@
       list.appendChild(row);
     });
     body.appendChild(list);
+
+    const notes = document.createElement('div');
+    notes.style.cssText = 'margin-top:18px;font-size:12.5px;line-height:1.5;color:var(--text-dim);';
+    const dur = GYM_PLAN_NOTES[currentPlanDay];
+    if (dur) { const d = document.createElement('div'); d.style.cssText = 'margin-bottom:8px;font-weight:600;'; d.textContent = dur; notes.appendChild(d); }
+    const ul = document.createElement('ul');
+    ul.style.cssText = 'margin:0;padding-left:18px;';
+    GYM_PLAN_NOTES.rules.forEach(r => { const li = document.createElement('li'); li.textContent = r; ul.appendChild(li); });
+    notes.appendChild(ul);
+    body.appendChild(notes);
   }
 
   function addGymLogRow(day) {
