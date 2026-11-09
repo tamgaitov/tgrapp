@@ -1,6 +1,6 @@
 // Offline cache. Bump VERSION after changing app files so devices pick up the update.
-const VERSION = 'tgrapp-v33';
-const FILES = ['./', './index.html', './sync-db.js', './extras.js', './xlsx.full.min.js', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
+const VERSION = 'tgrapp-v34';
+const FILES = ['./', './index.html', './sync-db.js', './extras.js', './motivation.js', './xlsx.full.min.js', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 const OPTIONAL = ['./tgr-widget.js'];   // nice to have offline, but a missing one must not block the update
 

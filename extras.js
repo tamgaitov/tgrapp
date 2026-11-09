@@ -3466,7 +3466,7 @@
   }
   applyTheme((() => { try { return localStorage.getItem('tgr_theme'); } catch (e) { return null; } })());
 
-  const APP_VERSION = '27';
+  const APP_VERSION = '28';
   async function checkForUpdates(btn, msg) {
     btn.disabled = true; btn.textContent = 'Checking...';
     try {
@@ -3606,6 +3606,7 @@
         <li>Tap <b>Copy widget script</b>. In Scriptable tap <b>+</b>, paste, tap the name at the top and call it <b>TGRAPP</b>, then <b>Done</b>.</li>
         <li><b>Home Screen:</b> hold an empty spot → <b>Edit</b> → <b>Add Widget</b> → Scriptable → pick a size. Then hold the widget → <b>Edit Widget</b> → Script: <b>TGRAPP</b>.</li>
         <li><b>Lock Screen:</b> hold it → <b>Customize</b> → <b>Lock Screen</b> → tap the widget row → Scriptable → the wide one. Tap it → Script: <b>TGRAPP</b>.</li>
+        <li><b>Motivation:</b> add one more Scriptable widget the same way, pick Script <b>TGRAPP</b> and type <b>motivation</b> in Parameter. It shows your phrases from the Motivation page.</li>
       </ol>
       <button class="x-btn primary" id="wg-copy">Copy widget script</button>
       <span class="t-hint" id="wg-msg">Folders and look update in the widget by themselves, no need to copy again. The widget refreshes about every 15 to 30 minutes, iPhone decides when.</span>

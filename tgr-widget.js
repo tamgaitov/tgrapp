@@ -1,11 +1,12 @@
 // TGRAPP widget for the Scriptable app.
 // Shows your most important open ToDo tasks on the Home Screen and the Lock Screen.
+// With the widget Parameter "motivation" it shows a phrase from the app's Motivation page instead.
 // It reads the data.json your TGRAPP app syncs to GitHub.
 // Your sync token is inside this script: don't share it.
 // Made by TGRAPP (Settings → iPhone widget). Folders and look are chosen in the app.
 
 const CFG = __TGR_CONFIG__;
-const VERSION = 1;
+const VERSION = 2;
 
 const PRIO = { '2': ['#e03e3e', 'Highest', '🔴'], '1': ['#e0823e', 'High', '🟠'], '0': ['#8b8d93', 'Medium', '⚪️'], '-1': ['#3f8de0', 'Low', '🔵'], '-2': ['#6b6dae', 'Lowest', '🟣'] };
 const LOOKS = {
@@ -18,6 +19,8 @@ const LOOKS = {
 
 const fm = FileManager.local();
 const CACHE = fm.joinPath(fm.documentsDirectory(), 'tgrapp-widget-cache.json');
+const LAST_QUOTE = fm.joinPath(fm.documentsDirectory(), 'tgrapp-widget-quote.txt');
+const MODE = /motiv/i.test(String(args.widgetParameter || '')) ? 'motivation' : 'todo';
 const pad2 = n => String(n).padStart(2, '0');
 const ymd = d => d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
 const clean = s => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
@@ -36,6 +39,7 @@ function slim(cols) {
       id: t.id, text: clean(t.text), priority: t.priority || 0, deadline: t.deadline || null, folderId: t.folderId || null,
       order: t.order != null ? t.order : (t.createdAt || 0), subs: subs[t.id] || null })),
     folders: live(cols.folders).map(f => ({ id: f.id, name: clean(f.name) || 'Folder', parentId: f.parentId || null, order: f.order != null ? f.order : (f.createdAt || 0) })),
+    motivation: live(cols.motivation).filter(m => clean(m.text)).map(m => ({ id: m.id, text: String(m.text).trim(), pinned: !!m.pinned })),
     widget: ws && !ws._d ? { folders: Array.isArray(ws.folders) ? ws.folders : null, look: ws.look || 'auto' } : { folders: null, look: 'auto' }
   };
 }
@@ -99,6 +103,20 @@ function folderTree(d) {
   const walk = (pid, names, depth) => { if (depth > 8) return; kids(pid).forEach(f => { const n = names.concat(f.name); out.push({ f, path: n.join(' / ') }); walk(f.id, n, depth + 1); }); };
   walk(null, [], 0);
   return out;
+}
+
+// pinned phrase first; otherwise a different phrase on each refresh
+function quote(d) {
+  const all = (d && d.motivation) || [];
+  if (!all.length) return null;
+  const pin = all.find(m => m.pinned);
+  if (pin) return pin;
+  let last = null;
+  try { if (fm.fileExists(LAST_QUOTE)) last = fm.readString(LAST_QUOTE); } catch (e) {}
+  const pool = all.length > 1 ? all.filter(m => m.id !== last) : all;
+  const q = pool[Math.floor(Math.random() * pool.length)];
+  try { fm.writeString(LAST_QUOTE, q.id); } catch (e) {}
+  return q;
 }
 
 // ---------- look ----------
@@ -184,6 +202,38 @@ function homeWidget(fam, res) {
   return w;
 }
 
+// ---------- Motivation ----------
+function motivationWidget(fam, res) {
+  const d = res.d, q = d ? quote(d) : null;
+  const msg = !d ? (res.err === 'net' ? 'No data yet, no internet' : 'Tap to finish setup') : q ? q.text : 'Add a phrase in TGRAPP → Motivation';
+  const w = new ListWidget();
+  if (fam === 'accessoryInline') { w.addText(msg.replace(/\s+/g, ' ')); return w; }
+  if (fam === 'accessoryCircular') {
+    w.addAccessoryWidgetBackground = true;
+    w.addSpacer();
+    const im = w.addImage(sym('bolt.fill', 16, true)); im.imageSize = new Size(20, 20); im.centerAlignImage();
+    w.addSpacer();
+    return w;
+  }
+  if (fam === 'accessoryRectangular') {
+    const t = txt(w, msg, Font.semiboldSystemFont(14), null, 4);
+    t.minimumScaleFactor = 0.55;
+    return w;
+  }
+  const C = colors(d ? d.widget.look : 'auto');
+  if (C.fixed) { const g = new LinearGradient(); g.colors = [C.bg2, C.bg]; g.locations = [0, 0.75]; w.backgroundGradient = g; }
+  else w.backgroundColor = C.bg;
+  w.setPadding(14, 15, 14, 15);
+  const h = w.addStack(); h.centerAlignContent(); h.spacing = 5;
+  const ic = h.addImage(sym('bolt.fill', 12, true)); ic.imageSize = new Size(13, 13); ic.tintColor = C.accent;
+  txt(h, 'Motivation', Font.boldSystemFont(13), C.dim);
+  w.addSpacer();
+  const t = txt(w, msg, Font.boldSystemFont(fam === 'large' ? 26 : fam === 'small' ? 17 : 20), C.text, fam === 'large' ? 10 : 5);
+  t.minimumScaleFactor = 0.5;
+  w.addSpacer();
+  return w;
+}
+
 // ---------- Lock Screen ----------
 function lockWidget(fam, res) {
   const d = res.d, list = d ? pick(d) : [];
@@ -223,7 +273,7 @@ function lockWidget(fam, res) {
 }
 
 function makeWidget(fam, res) {
-  const w = String(fam).startsWith('accessory') ? lockWidget(fam, res) : homeWidget(fam, res);
+  const w = MODE === 'motivation' ? motivationWidget(fam, res) : String(fam).startsWith('accessory') ? lockWidget(fam, res) : homeWidget(fam, res);
   w.refreshAfterDate = new Date(Date.now() + 15 * 60 * 1000);
   w.url = URLScheme.forRunningScript();
   return w;
