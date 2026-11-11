@@ -463,6 +463,8 @@
   .note-area:focus { border-color: var(--accent); }
   .detail-label { font-size: 10.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
   .meta-created { font-size: 11px; color: var(--text-dim); opacity: 0.75; }
+  .folder-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 2px 7px; border-radius: 6px; background: rgba(63,141,224,.14); color: #3f8de0; cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .folder-chip svg { flex-shrink: 0; }
   .deadline-chip {
     display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px;
     padding: 2px 7px 2px 6px; border-radius: 6px; cursor: pointer;
@@ -1216,8 +1218,13 @@
       return;
     }
     addRowEl.style.display = 'flex';
+    // Parent folders also show tasks from all nested subfolders (with a folder chip).
+    const scopeIds = new Set([norm(currentFolderId)]);
+    (function addKids(pid) {
+      allFolders.forEach(f => { if (norm(f.parentId) === pid && !scopeIds.has(f.id)) { scopeIds.add(f.id); addKids(f.id); } });
+    })(norm(currentFolderId));
     const all = allTasks
-      .filter(t => norm(t.folderId) === norm(currentFolderId))
+      .filter(t => scopeIds.has(norm(t.folderId)))
       .sort((a, b) => {
         const pd = (b.priority || 0) - (a.priority || 0);
         if (pd !== 0) return pd;
@@ -1267,6 +1274,21 @@
 
       const meta = document.createElement('div');
       meta.className = 'task-meta';
+
+      if (norm(t.folderId) !== norm(currentFolderId)) {
+        const path = [];
+        let pf = allFolders.find(x => x.id === norm(t.folderId));
+        while (pf && pf.id !== norm(currentFolderId)) { path.unshift(pf.name); pf = allFolders.find(x => x.id === norm(pf.parentId)); }
+        const fChip = document.createElement('span');
+        fChip.className = 'folder-chip';
+        fChip.innerHTML = iconSVG('folder', 11);
+        const fLabel = document.createElement('span');
+        fLabel.textContent = path.join(' / ');
+        fChip.appendChild(fLabel);
+        fChip.title = 'Open folder';
+        fChip.addEventListener('click', (e) => { e.stopPropagation(); navigateTo(norm(t.folderId)); });
+        meta.appendChild(fChip);
+      }
 
       const created = document.createElement('span');
       created.className = 'meta-created';
