@@ -106,7 +106,7 @@
     page.appendChild(list);
 
     page.appendChild(el('div', 'mo-help',
-      '<b>On the Lock Screen:</b> a pinned phrase (star) stays there. With nothing pinned, the widget shows a different phrase each time it refreshes.<br>' +
+      '<b>On the Lock Screen:</b> a pinned phrase (star) stays there. With nothing pinned, the widget goes through all your phrases in random order and repeats only after showing every one.<br>' +
       '<b>Set up once:</b> copy the widget script again (Settings → iPhone widget) and replace the old one in Scriptable. ' +
       'Then add a Scriptable widget to the Lock Screen, tap it, pick Script <b>TGRAPP</b> and type <b>motivation</b> in the Parameter field.'));
   }

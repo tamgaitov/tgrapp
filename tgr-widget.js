@@ -19,7 +19,7 @@ const LOOKS = {
 
 const fm = FileManager.local();
 const CACHE = fm.joinPath(fm.documentsDirectory(), 'tgrapp-widget-cache.json');
-const LAST_QUOTE = fm.joinPath(fm.documentsDirectory(), 'tgrapp-widget-quote.txt');
+const LAST_QUOTE = fm.joinPath(fm.documentsDirectory(), 'tgrapp-widget-quote.json');
 const MODE = /motiv/i.test(String(args.widgetParameter || '')) ? 'motivation' : 'todo';
 const pad2 = n => String(n).padStart(2, '0');
 const ymd = d => d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
@@ -105,18 +105,30 @@ function folderTree(d) {
   return out;
 }
 
-// pinned phrase first; otherwise a different phrase on each refresh
+// pinned phrase first; otherwise a shuffled deck: every phrase is shown once before any repeats
 function quote(d) {
   const all = (d && d.motivation) || [];
   if (!all.length) return null;
   const pin = all.find(m => m.pinned);
   if (pin) return pin;
-  let last = null;
-  try { if (fm.fileExists(LAST_QUOTE)) last = fm.readString(LAST_QUOTE); } catch (e) {}
-  const pool = all.length > 1 ? all.filter(m => m.id !== last) : all;
-  const q = pool[Math.floor(Math.random() * pool.length)];
-  try { fm.writeString(LAST_QUOTE, q.id); } catch (e) {}
-  return q;
+  if (all.length === 1) return all[0];
+  let st = {};
+  try { if (fm.fileExists(LAST_QUOTE)) st = JSON.parse(fm.readString(LAST_QUOTE)) || {}; } catch (e) { st = {}; }
+  const ids = new Set(all.map(m => m.id));
+  let deck = Array.isArray(st.deck) ? st.deck.filter(id => ids.has(id)) : [];
+  const seen = new Set(Array.isArray(st.seen) ? st.seen : []);
+  // phrases added since the deck was dealt join the current round
+  all.forEach(m => { if (!deck.includes(m.id) && !seen.has(m.id)) deck.splice(Math.floor(Math.random() * (deck.length + 1)), 0, m.id); });
+  if (!deck.length) {
+    deck = all.map(m => m.id);
+    for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
+    if (deck[0] === st.last) deck.push(deck.shift());   // never the same phrase twice in a row
+    seen.clear();
+  }
+  const id = deck.shift();
+  seen.add(id);
+  try { fm.writeString(LAST_QUOTE, JSON.stringify({ deck, seen: [...seen].filter(x => ids.has(x)), last: id })); } catch (e) {}
+  return all.find(m => m.id === id);
 }
 
 // ---------- look ----------
