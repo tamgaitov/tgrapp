@@ -21,6 +21,19 @@
   #bd-board.t-pen, #bd-board.t-arrow { cursor: crosshair; }
   #bd-board.t-text { cursor: text; }
   #bd-board.t-eraser { cursor: cell; }
+  .bd-frame { position: absolute; z-index: 0; border-radius: 16px; border: 1.5px solid; box-sizing: border-box; }
+  .bd-fhead { position: absolute; left: 0; right: 0; top: 0; height: 42px; display: flex; align-items: center; gap: 7px; padding: 0 8px 0 14px;
+    font-weight: 700; font-size: 14.5px; cursor: grab; white-space: nowrap; overflow: hidden; }
+  .bd-fhead .nm { overflow: hidden; text-overflow: ellipsis; }
+  .bd-fhead .ct { font-weight: 600; font-size: 11.5px; opacity: .7; }
+  .bd-fhead .sp { flex: 1; }
+  .bd-fadd { border: 0; background: none; color: inherit; width: 28px; height: 28px; border-radius: 8px; cursor: pointer; font-size: 20px; line-height: 1; flex-shrink: 0; }
+  .bd-fadd:hover { background: rgba(127,127,127,.15); }
+  .bd-finput { flex: 1; min-width: 60px; font: inherit; font-size: 13.5px; font-weight: 500; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--accent);
+    background: var(--bg); color: var(--text); outline: none; }
+  .bd-fresize { position: absolute; right: 0; bottom: 0; width: 22px; height: 22px; cursor: nwse-resize; border-radius: 0 0 14px 0;
+    background: linear-gradient(135deg, transparent 55%, currentColor 55%, currentColor 62%, transparent 62%, transparent 72%, currentColor 72%, currentColor 79%, transparent 79%); opacity: .5; }
+  .bd-frame.drop { box-shadow: 0 0 0 3px var(--accent); }
   .bd-world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
   .bd-svg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; z-index: 2; pointer-events: none; }
   .bd-svg [data-sid] { pointer-events: auto; }
@@ -86,10 +99,11 @@
   const viewbar = document.createElement('div'); viewbar.className = 'bd-viewbar';
   pageTodo.insertBefore(viewbar, addRow);
   const board = document.createElement('div'); board.id = 'bd-board';
-  board.innerHTML = '<div class="bd-world"><div class="bd-cards"></div><svg class="bd-svg"></svg><div class="bd-notes"></div></div><div class="bd-zoom" title="Fit everything">100%</div><div class="bd-tools"></div>';
+  board.innerHTML = '<div class="bd-world"><div class="bd-frames"></div><div class="bd-cards"></div><svg class="bd-svg"></svg><div class="bd-notes"></div></div><div class="bd-zoom" title="Fit everything">100%</div><div class="bd-tools"></div>';
   pageTodo.appendChild(board);
   const world = board.querySelector('.bd-world');
   const cardsEl = board.querySelector('.bd-cards');
+  const framesEl = board.querySelector('.bd-frames');
   const svg = board.querySelector('.bd-svg');
   const notesEl = board.querySelector('.bd-notes');
   const zoomEl = board.querySelector('.bd-zoom');
@@ -183,7 +197,7 @@
   function local(e) { const r = board.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
   function toWorld(e) { const p = local(e); return { x: (p.x - cam.x) / cam.z, y: (p.y - cam.y) / cam.z }; }
   function fit(initial) {
-    const rs = [...cardsEl.children].map(el => ({ x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight }));
+    const rs = [...cardsEl.children, ...framesEl.children].map(el => ({ x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight }));
     boardShapes().forEach(s => { const b = shapeBox(s); if (b) rs.push(b); });
     if (!rs.length) { cam = { x: 40, y: 40, z: 1 }; applyCam(); return; }
     const x0 = Math.min(...rs.map(r => r.x)), y0 = Math.min(...rs.map(r => r.y));
@@ -203,6 +217,103 @@
     const ids = new Set([currentFolderId]);
     (function kids(pid) { allFolders.forEach(f => { if (norm(f.parentId) === pid && !ids.has(f.id)) { ids.add(f.id); kids(f.id); } }); })(currentFolderId);
     return allTasks.filter(t => ids.has(norm(t.folderId))).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  }
+  // Subfolders of the board's folder become frames; a task belongs to the frame of its top-level subfolder.
+  const childFolders = () => allFolders.filter(f => norm(f.parentId) === currentFolderId).sort((a, b) => (a.order || a.createdAt || 0) - (b.order || b.createdAt || 0));
+  function topChild(fid) {
+    fid = norm(fid);
+    while (fid && fid !== currentFolderId) { const f = allFolders.find(x => x.id === fid); if (!f) return null; if (norm(f.parentId) === currentFolderId) return f.id; fid = norm(f.parentId); }
+    return null;
+  }
+  const frameKey = fid => cardKey('f_' + fid);
+  const FRAME_COLORS = ['#1d6fe0', '#2fa36b', '#e0823e', '#8a4fd8', '#d64545', '#0f9fb0', '#b58a00'];
+  const frameEls = new Map();
+  function frameRect(el) { return { x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight }; }
+  function frameAt(x, y, skip) {
+    const els = [...frameEls.values()].filter(el => el.isConnected && el !== skip).reverse();
+    const el = els.find(el => { const r = frameRect(el); return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h; });
+    return el ? el.dataset.fid : null;
+  }
+  function setTaskFolder(t, folderId) {
+    if (usingLocal) { t.folderId = folderId; saveLocal(); renderTasks(); }
+    else tasksCol.doc(t.id).update({ folderId }).catch(() => {});
+  }
+  function addTaskTo(folderId, text) {
+    const data = { text, done: false, createdAt: Date.now(), folderId, priority: 0, deadline: null, completedAt: null, order: Date.now() };
+    if (usingLocal) { allTasks.push({ id: 'l' + Date.now() + Math.random(), ...data }); saveLocal(); renderTasks(); }
+    else tasksCol.add(data).catch(() => {});
+  }
+  function renderFrames(tasks) {
+    const kids = childFolders(), seen = new Set();
+    kids.forEach((f, i) => {
+      seen.add(f.id);
+      let el = frameEls.get(f.id);
+      if (!el) {
+        el = document.createElement('div'); el.className = 'bd-frame'; el.dataset.fid = f.id;
+        el.innerHTML = '<div class="bd-fhead"><span class="ic"></span><span class="nm"></span><span class="ct"></span><span class="sp"></span><button class="bd-fadd" title="Add task here">+</button></div><div class="bd-fresize"></div>';
+        el.querySelector('.bd-fadd').addEventListener('click', e => { e.stopPropagation(); openFrameInput(el, f.id); });
+        frameEls.set(f.id, el);
+      }
+      if (el.parentNode !== framesEl) framesEl.appendChild(el);
+      const c = FRAME_COLORS[i % FRAME_COLORS.length];
+      el.style.borderColor = c + '66'; el.style.background = c + '12'; el.style.color = c;
+      el.querySelector('.ic').innerHTML = iconSVG(f.icon || 'folder', 15);
+      el.querySelector('.nm').textContent = f.name;
+      const n = tasks.filter(t => !t.done && topChild(t.folderId) === f.id).length;
+      el.querySelector('.ct').textContent = n ? n : '';
+      const p = cardPos[frameKey(f.id)];
+      if (p) { Object.assign(el.style, { left: p.x + 'px', top: p.y + 'px', width: p.w + 'px', height: p.h + 'px', visibility: '' }); el._placed = true; }
+      else { el.style.visibility = 'hidden'; el._placed = false; }
+    });
+    for (const [id, el] of frameEls) if (!seen.has(id)) { el.remove(); frameEls.delete(id); }
+  }
+  // Frames not on the board yet: two per row, sized for their tasks, below/next to everything already there.
+  function placeFrames(tasks) {
+    const rects = [...cardsEl.children].filter(el => el.style.visibility !== 'hidden').map(frameRect)
+      .concat([...frameEls.values()].filter(el => el._placed).map(frameRect));
+    const hit = r => rects.some(o => r.x < o.x + o.w + 30 && r.x + r.w + 30 > o.x && r.y < o.y + o.h + 30 && r.y + r.h + 30 > o.y);
+    childFolders().forEach(f => {
+      const el = frameEls.get(f.id);
+      if (!el || el._placed) return;
+      const n = tasks.filter(t => topChild(t.folderId) === f.id).length;
+      const w = 512, h = 60 + Math.max(1, Math.ceil(n / 2)) * 120;
+      let pos = null;
+      for (let i = 0; i < 4000 && !pos; i++) { const r = { x: (i % 2) * (w + 40), y: Math.floor(i / 2) * 40, w, h }; if (!hit(r)) pos = r; }
+      rects.push(pos);
+      Object.assign(el.style, { left: pos.x + 'px', top: pos.y + 'px', width: w + 'px', height: h + 'px', visibility: '' }); el._placed = true;
+      cardPos[frameKey(f.id)] = { x: pos.x, y: pos.y, w, h };
+      cardsCol.doc(frameKey(f.id)).set({ folderId: currentFolderId, frameId: f.id, x: pos.x, y: pos.y, w, h });
+    });
+  }
+  // Frames grow (on screen) to keep their cards inside.
+  function growFrames() {
+    for (const [fid, el] of frameEls) {
+      const p = cardPos[frameKey(fid)]; if (!p) continue;
+      let w = p.w, h = p.h;
+      for (const [tid, c] of cardEls) {
+        const t = allTasks.find(x => x.id === tid);
+        if (!t || topChild(t.folderId) !== fid || c.style.visibility === 'hidden') continue;
+        w = Math.max(w, c.offsetLeft + c.offsetWidth + 16 - p.x); h = Math.max(h, c.offsetTop + c.offsetHeight + 16 - p.y);
+      }
+      el.style.width = w + 'px'; el.style.height = h + 'px';
+    }
+  }
+  function openFrameInput(el, fid) {
+    const head = el.querySelector('.bd-fhead');
+    if (head.querySelector('.bd-finput')) return;
+    const inp = document.createElement('input'); inp.className = 'bd-finput'; inp.placeholder = 'new task...';
+    head.insertBefore(inp, head.querySelector('.bd-fadd'));
+    head.querySelector('.sp').style.display = 'none';
+    window.__editing = true;
+    const close = () => { inp.remove(); head.querySelector('.sp').style.display = ''; window.__editing = false;
+      if (window.__renderPending) { window.__renderPending = false; renderAll(); } else if (drawPending) draw(); };
+    inp.addEventListener('keydown', e => {
+      e.stopPropagation();
+      if (e.key === 'Enter' && inp.value.trim()) { const v = inp.value.trim(); inp.value = ''; addTaskTo(fid, v); }
+      else if (e.key === 'Escape') inp.blur();
+    });
+    inp.addEventListener('blur', close);
+    inp.focus();
   }
   const recentDone = new Set();   // ticked on the board this session: keep them visible
   function shapeBox(s) {
@@ -236,6 +347,7 @@
       if (!c) setTimeout(() => fit(true), 0);
     }
     const tasks = scopeTasks().filter(t => !t.done || showDone || recentDone.has(t.id));
+    renderFrames(tasks);
     const seen = new Set();
     const unplaced = [];
     tasks.forEach(t => {
@@ -249,7 +361,11 @@
       else { el.style.visibility = 'hidden'; unplaced.push({ t, el }); }
     });
     for (const [id, el] of cardEls) if (!seen.has(id)) { el.remove(); cardEls.delete(id); }
-    if (unplaced.length) autoPlace(unplaced);
+    const loose = unplaced.filter(u => !topChild(u.t.folderId)), framed = unplaced.filter(u => topChild(u.t.folderId));
+    if (loose.length) autoPlace(loose);
+    placeFrames(tasks);
+    if (framed.length) autoPlace(framed);
+    growFrames();
     drawShapes();
   }
 
@@ -259,7 +375,7 @@
     el.style.borderLeft = (t.priority || 0) !== 0 ? '3px solid ' + p.color : '';
     const subs = allSubtasks.filter(s => s.taskId === t.id);
     const meta = [];
-    if (norm(t.folderId) !== currentFolderId) { const f = allFolders.find(x => x.id === norm(t.folderId)); if (f) meta.push('<span>' + esc(f.name) + '</span>'); }
+    if (norm(t.folderId) !== currentFolderId && norm(t.folderId) !== topChild(t.folderId)) { const f = allFolders.find(x => x.id === norm(t.folderId)); if (f) meta.push('<span>' + esc(f.name) + '</span>'); }
     if (subs.length) meta.push('<span>' + subs.filter(s => s.done).length + '/' + subs.length + '</span>');
     if (t.deadline) meta.push('<span class="' + (isOverdue(t.deadline, t.done) ? 'od' : '') + '">' + fmtDeadline(t.deadline) + '</span>');
     const sig = [t.text, t.done, t.priority, t.deadline, meta.join('')].join('|');
@@ -274,11 +390,18 @@
   // New cards go into the first free grid slot: near the current view for just-added tasks, else from the origin.
   function autoPlace(list) {
     const GW = 240, GH = 120, COLS = board.clientWidth && board.clientWidth < 700 ? 2 : 4;
-    const rects = [...cardsEl.children].filter(el => el.style.visibility !== 'hidden')
-      .map(el => ({ x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight }));
+    const rects = [...cardsEl.children].filter(el => el.style.visibility !== 'hidden').map(frameRect);
+    const frameRects = [...frameEls.values()].filter(el => el._placed).map(frameRect);
     const hit = r => rects.some(o => r.x < o.x + o.w + 12 && r.x + r.w + 12 > o.x && r.y < o.y + o.h + 12 && r.y + r.h + 12 > o.y);
     list.forEach(({ t, el }) => {
       const h = el.offsetHeight || 60;
+      const fid = topChild(t.folderId), fp = fid && cardPos[frameKey(fid)];
+      if (fp) {      // goes inside its folder's frame
+        const fc = Math.max(1, Math.floor((fp.w - 32 + 20) / GW));
+        let pos = null;
+        for (let i = 0; i < 4000 && !pos; i++) { const r = { x: fp.x + 16 + (i % fc) * GW, y: fp.y + 52 + Math.floor(i / fc) * GH, w: 220, h }; if (!hit(r)) pos = r; }
+        rects.push(pos); setPos(t, el, pos); return;
+      }
       const fresh = Date.now() - (t.createdAt || 0) < 15000 && board.clientWidth;
       const ox = fresh ? Math.round((24 - cam.x) / cam.z / 20) * 20 : 0;
       const oy = fresh ? Math.round((24 - cam.y) / cam.z / 20) * 20 : 0;
@@ -286,13 +409,15 @@
       let pos = null;
       for (let i = 0; i < 4000 && !pos; i++) {
         const r = { x: ox + (i % cols) * GW, y: oy + Math.floor(i / cols) * GH, w: 220, h };
-        if (!hit(r)) pos = r;
+        if (!hit(r) && !frameRects.some(o => r.x < o.x + o.w + 12 && r.x + r.w + 12 > o.x && r.y < o.y + o.h + 12 && r.y + r.h + 12 > o.y)) pos = r;
       }
-      rects.push(pos);
-      el.style.left = pos.x + 'px'; el.style.top = pos.y + 'px'; el.style.visibility = '';
-      cardPos[cardKey(t.id)] = { x: pos.x, y: pos.y };
-      cardsCol.doc(cardKey(t.id)).set({ folderId: currentFolderId, taskId: t.id, x: pos.x, y: pos.y });
+      rects.push(pos); setPos(t, el, pos);
     });
+  }
+  function setPos(t, el, pos) {
+    el.style.left = pos.x + 'px'; el.style.top = pos.y + 'px'; el.style.visibility = '';
+    cardPos[cardKey(t.id)] = { x: pos.x, y: pos.y };
+    cardsCol.doc(cardKey(t.id)).set({ folderId: currentFolderId, taskId: t.id, x: pos.x, y: pos.y });
   }
 
   function cardRect(tid) {
@@ -391,7 +516,7 @@
   const pointers = new Map();
   let act = null, pinch = null, lastTap = { id: null, t: 0 };
   board.addEventListener('pointerdown', e => {
-    if (e.target.closest('.bd-tools, .bd-zoom, .inline-edit, [contenteditable="true"]')) return;
+    if (e.target.closest('.bd-tools, .bd-zoom, .inline-edit, [contenteditable="true"], .bd-fadd, .bd-finput')) return;
     if (e.button && e.button !== 0 && e.button !== 1) return;
     if (editingNote) { editingNote.blur(); e.preventDefault(); return; }   // a tap outside just finishes the text
     if (document.activeElement && document.activeElement !== document.body && !board.contains(document.activeElement)) document.activeElement.blur();
@@ -409,9 +534,22 @@
     const card = e.target.closest('.bd-card'), note = e.target.closest('.bd-note'), g = e.target.closest('.bd-svg [data-sid]');
     const t = e.button === 1 ? 'pan' : tool;
     if (t === 'select' && card && e.target.closest('.bd-check')) { act = { kind: 'check', card }; return; }
+    const fhead = !card && e.target.closest('.bd-fhead'), fres = !card && e.target.closest('.bd-fresize');
+    if (t === 'select' && (fhead || fres)) {
+      const fel = (fhead || fres).parentNode, fid = fel.dataset.fid, fp = cardPos[frameKey(fid)];
+      if (fp) {
+        selectShape(null);
+        if (fres) { act = { kind: 'fresize', fel, fid, sx: p.x, sy: p.y, ow: fel.offsetWidth, oh: fel.offsetHeight, fp: { ...fp } }; return; }
+        const members = [...cardEls].filter(([tid, c]) => { const tk = allTasks.find(x => x.id === tid); return tk && topChild(tk.folderId) === fid && c.style.visibility !== 'hidden'; })
+          .map(([tid, c]) => ({ tid, el: c, ox: c.offsetLeft, oy: c.offsetTop }));
+        act = { kind: 'frame', fel, fid, sx: p.x, sy: p.y, fp: { ...fp }, members, moved: false };
+        return;
+      }
+    }
     if (t === 'select' && card) {
       const pos = cardPos[cardKey(card.dataset.tid)] || { x: card.offsetLeft, y: card.offsetTop };
-      act = { kind: 'card', el: card, tid: card.dataset.tid, sx: p.x, sy: p.y, ox: pos.x, oy: pos.y, moved: false };
+      const tk = allTasks.find(x => x.id === card.dataset.tid);
+      act = { kind: 'card', el: card, tid: card.dataset.tid, sx: p.x, sy: p.y, ox: pos.x, oy: pos.y, moved: false, home: tk ? topChild(tk.folderId) : null };
       selectShape(null);
     } else if (t === 'select' && (note || g)) {
       const s = shapes.find(x => x.id === (note || g).dataset.sid);
@@ -454,12 +592,25 @@
     if (!act) return;
     const p = toWorld(e), sp = local(e);
     if (act.kind === 'pan') { cam.x = act.cx + sp.x - act.sx; cam.y = act.cy + sp.y - act.sy; applyCam(); }
+    else if (act.kind === 'frame') {
+      const dx = Math.round(p.x - act.sx), dy = Math.round(p.y - act.sy);
+      if (!act.moved && Math.hypot(dx, dy) * cam.z < 4) return;
+      act.moved = true; act.dx = dx; act.dy = dy;
+      act.fel.style.left = (act.fp.x + dx) + 'px'; act.fel.style.top = (act.fp.y + dy) + 'px';
+      act.members.forEach(m => { m.el.style.left = (m.ox + dx) + 'px'; m.el.style.top = (m.oy + dy) + 'px'; });
+      drawShapes();
+    } else if (act.kind === 'fresize') {
+      act.w = Math.max(240, Math.round(act.ow + p.x - act.sx)); act.h = Math.max(110, Math.round(act.oh + p.y - act.sy));
+      act.fel.style.width = act.w + 'px'; act.fel.style.height = act.h + 'px';
+    }
     else if (act.kind === 'card') {
       const dx = p.x - act.sx, dy = p.y - act.sy;
       if (!act.moved && Math.hypot(dx, dy) * cam.z < 4) return;
       act.moved = true; act.el.classList.add('dragging');
       act.nx = Math.round(act.ox + dx); act.ny = Math.round(act.oy + dy);
       act.el.style.left = act.nx + 'px'; act.el.style.top = act.ny + 'px';
+      const over = frameAt(act.nx + act.el.offsetWidth / 2, act.ny + act.el.offsetHeight / 2);
+      frameEls.forEach((fe, id) => fe.classList.toggle('drop', id === over && over !== act.home));
       drawShapes();   // attached arrows follow
     } else if (act.kind === 'shape') {
       const dx = p.x - act.sx, dy = p.y - act.sy;
@@ -506,12 +657,37 @@
           const key = cardKey(a.tid), prev = { x: a.ox, y: a.oy };
           cardPos[key] = { x: a.nx, y: a.ny };
           cardsCol.doc(key).set({ folderId: currentFolderId, taskId: a.tid, x: a.nx, y: a.ny });
-          pushUndo(() => cardsCol.doc(key).set({ folderId: currentFolderId, taskId: a.tid, ...prev }));
+          frameEls.forEach(fe => fe.classList.remove('drop'));
+          const t = allTasks.find(x => x.id === a.tid);
+          const target = frameAt(a.nx + a.el.offsetWidth / 2, a.ny + a.el.offsetHeight / 2);
+          if (t && target !== a.home) {       // dropped into another frame (or out of one): move the task to that folder
+            const oldF = t.folderId, fid = currentFolderId;
+            setTaskFolder(t, target || currentFolderId);
+            pushUndo(() => { cardsCol.doc(key).set({ folderId: fid, taskId: a.tid, ...prev }); const tt = allTasks.find(x => x.id === a.tid); if (tt) setTaskFolder(tt, oldF); });
+          } else pushUndo(() => cardsCol.doc(key).set({ folderId: currentFolderId, taskId: a.tid, ...prev }));
         } else if (lastTap.id === a.tid && Date.now() - lastTap.t < 350) {     // double tap: edit text
           lastTap = { id: null, t: 0 };
           const t = allTasks.find(x => x.id === a.tid), txt = a.el.querySelector('.bd-text');
           if (t && txt) { finish(); inlineEdit(txt, t.text, v => updateTaskText(t, v)); a.el._sig = null; return; }
         } else lastTap = { id: a.tid, t: Date.now() };
+      } else if (a.kind === 'frame' || a.kind === 'fresize') {
+        const fk = frameKey(a.fid), fid = currentFolderId, old = a.fp;
+        if (a.kind === 'fresize' && a.w) {
+          const np = { ...old, w: a.w, h: a.h }; cardPos[fk] = np;
+          cardsCol.doc(fk).set({ folderId: fid, frameId: a.fid, ...np });
+          pushUndo(() => cardsCol.doc(fk).set({ folderId: fid, frameId: a.fid, ...old }));
+        } else if (a.kind === 'frame' && a.moved) {
+          const np = { ...old, x: old.x + a.dx, y: old.y + a.dy }; cardPos[fk] = np;
+          cardsCol.doc(fk).set({ folderId: fid, frameId: a.fid, ...np });
+          a.members.forEach(m => { const k = cardKey(m.tid); cardPos[k] = { x: m.ox + a.dx, y: m.oy + a.dy }; cardsCol.doc(k).set({ folderId: fid, taskId: m.tid, ...cardPos[k] }); });
+          pushUndo(() => {
+            cardsCol.doc(fk).set({ folderId: fid, frameId: a.fid, ...old });
+            a.members.forEach(m => cardsCol.doc(cardKey(m.tid)).set({ folderId: fid, taskId: m.tid, x: m.ox, y: m.oy }));
+          });
+        } else if (a.kind === 'frame') {
+          if (lastTap.id === a.fid && Date.now() - lastTap.t < 350) { lastTap = { id: null, t: 0 }; finish(); navigateTo(a.fid); return; }
+          lastTap = { id: a.fid, t: Date.now() };
+        }
       } else if (a.kind === 'shape') {
         if (a.moved) {
           const patch = moveShape(a.orig, a.dx, a.dy), back = moveShape(a.orig, 0, 0);
@@ -534,7 +710,7 @@
         const gone = a.gone;
         pushUndo(() => gone.forEach(({ id, ...d }) => shapesCol.doc(id).set(d)));
       }
-    } else if (a && a.kind === 'card') a.el.classList.remove('dragging');
+    } else if (a && a.kind === 'card') { a.el.classList.remove('dragging'); frameEls.forEach(fe => fe.classList.remove('drop')); }
     if (!pointers.size) finish();
   }
   function cancelAct() { if (act && act.kind === 'card') act.el.classList.remove('dragging'); act = null; live = null; drawShapes(); }
