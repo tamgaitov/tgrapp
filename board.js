@@ -723,7 +723,10 @@
   board.addEventListener('wheel', e => {
     e.preventDefault();
     const sp = local(e);
-    if (e.ctrlKey || e.metaKey) zoomAt(sp.x, sp.y, Math.exp(-e.deltaY * 0.01));
+    if (e.ctrlKey || e.metaKey) {     // ~10% per mouse-wheel notch, smooth on trackpad pinch
+      const dy = e.deltaY * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1);
+      zoomAt(sp.x, sp.y, Math.exp(-Math.max(-100, Math.min(100, dy)) * 0.001));
+    }
     else { cam.x -= e.deltaX; cam.y -= e.deltaY; applyCam(); }
   }, { passive: false });
   // Safari trackpad pinch
