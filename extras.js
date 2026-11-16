@@ -2095,6 +2095,22 @@
     if (f.uploaded) { setDelQ(getDelQ().concat([filePath(f)])); pumpUploads(); }
     if (xState.fileId === f.id) { xState.fileId = null; if (currentPage === 'xls') { if (f.scope === 'finance') goFinance(f.folderId || null); else { currentPage = 'notes'; nState.noteId = null; renderAll(); } } }
   }
+  // photos for whiteboards (board.js): same storage as note photos, scope 'bimg'
+  window.TgrFiles = {
+    async addImage(file) {
+      const p = await prepImage(file);
+      const base = (file.name || 'photo').replace(/\.[^.]+$/, '').slice(0, 60) || 'photo';
+      const r = await filesCol.add({ name: base + p.ext, ext: p.ext, mime: p.mime, size: p.buf.byteLength, scope: 'bimg', folderId: null, w: p.w, h: p.h, createdAt: Date.now(), uploaded: false });
+      imgURLs.set(r.id, URL.createObjectURL(new Blob([p.buf], { type: p.mime })));
+      try { await idbPut(r.id, p.buf); } catch (e) {}
+      pumpUploads();
+      return { id: r.id, w: p.w, h: p.h };
+    },
+    url: id => imgURL(id),
+    isPic: f => isPicFile(f),
+    list: () => files.filter(f => f.scope === 'bimg'),
+    remove: id => { const f = files.find(x => x.id === id); if (f) deleteFile(f, false); }
+  };
   async function downloadFile(f) {
     let buf = await idbGet(f.id);
     if (!buf) { const cfg = ghCfg(); if (!cfg) return alert('Set up sync first'); buf = await ghGet(cfg, filePath(f)); idbPut(f.id, buf); }
