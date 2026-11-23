@@ -415,6 +415,31 @@
   :root[data-theme="fallout"] .prof-cam, :root[data-theme="fallout"] button[style*="var(--accent)"] { color: #041208 !important; text-shadow: none; }
   :root[data-theme="fallout"] ::selection { background: #3dff7e; color: #041208; }
 
+  :root[data-theme="vice"] {
+    --bg: #140a22; --bg-elevated: #1e1033; --sidebar-bg: #0d0618; --sidebar-text: #f3e6ff; --sidebar-text-dim: #8f74b3;
+    --sidebar-active: #2a1446; --sidebar-hover: #1a0d2c; --text: #fbefff; --text-dim: #a88fc8; --accent: #ff3d8b; --accent-soft: #3a1238;
+    --border: #35204f; --danger: #ffb03b; --popover-bg: #23123a; color-scheme: dark;
+  }
+  :root[data-theme="vice"] body {
+    background: radial-gradient(1100px 520px at 85% -10%, rgba(255,122,61,.22) 0%, transparent 60%),
+      radial-gradient(900px 500px at 0% 0%, rgba(255,61,139,.18) 0%, transparent 60%),
+      radial-gradient(1000px 600px at 50% 120%, rgba(40,200,230,.12) 0%, transparent 60%), var(--bg); }
+  :root[data-theme="vice"] #main { background: transparent; }
+  :root[data-theme="vice"] #sidebar { background: linear-gradient(180deg, #1a0a2c 0%, #0d0618 55%, #08121c 100%); box-shadow: inset -1px 0 0 #35204f, inset -3px 0 0 rgba(255,61,139,.18); }
+  :root[data-theme="vice"] .x-title, :root[data-theme="vice"] .pl-title, :root[data-theme="vice"] .prof-info h1,
+  :root[data-theme="vice"] .crumb.current, :root[data-theme="vice"] #sidebar-title {
+    font-family: 'Oswald', 'Bebas Neue', Impact, sans-serif; letter-spacing: .05em; text-transform: uppercase;
+    background: linear-gradient(90deg, #ffb347 0%, #ff3d8b 55%, #b84dff 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  :root[data-theme="vice"] #sidebar .row-name[style*="700"] { font-family: 'Oswald', 'Bebas Neue', Impact, sans-serif; letter-spacing: .05em; text-transform: uppercase; font-weight: 600 !important; }
+  :root[data-theme="vice"] #add-btn, :root[data-theme="vice"] #weight-add-btn, :root[data-theme="vice"] .x-btn.primary,
+  :root[data-theme="vice"] .tab-btn.active, :root[data-theme="vice"] .pl-add, :root[data-theme="vice"] .sync-actions button.primary, :root[data-theme="vice"] .prof-cam {
+    background: linear-gradient(100deg, #ff8a3d 0%, #ff3d8b 60%, #c13dff 100%) !important; color: #fff !important; border-color: transparent !important;
+    box-shadow: 0 4px 18px rgba(255,61,139,.35); }
+  :root[data-theme="vice"] .task, :root[data-theme="vice"] .pl-card, :root[data-theme="vice"] .lv-hero, :root[data-theme="vice"] .prof-top, :root[data-theme="vice"] .t-card {
+    background: linear-gradient(160deg, rgba(42,20,70,.85), rgba(26,13,44,.85)); box-shadow: inset 0 1px 0 rgba(255,255,255,.04); }
+  :root[data-theme="vice"] .tree-row.active { box-shadow: inset 2px 0 0 #ff3d8b; }
+  :root[data-theme="vice"] ::selection { background: #ff3d8b; color: #fff; }
+
   /* background image setting */
   body.has-bgimg #main { background: var(--bg); }
   #bg-layer { opacity: var(--bg-img-op, .16); }
@@ -3462,7 +3487,8 @@
     { id: 'blood', name: 'Blood', c: ['#0b0b0c', '#141416', '#060607', '#c8102e'] },
     { id: 'skyrim', name: 'Skyrim', c: ['#16140f', '#201d17', '#0e0d0a', '#b8975a'] },
     { id: 'wayne', name: 'Bruce Wayne', c: ['#0a0b0d', '#16191d', '#050607', '#9fb0c3'] },
-    { id: 'fallout', name: 'Fallout', c: ['#071a0d', '#0b2413', '#041208', '#3dff7e'] }
+    { id: 'fallout', name: 'Fallout', c: ['#071a0d', '#0b2413', '#041208', '#3dff7e'] },
+    { id: 'vice', name: 'GTA VI', c: ['#140a22', '#1e1033', '#0d0618', '#ff3d8b'] }
   ];
   function applyTheme(id) {
     if (id) document.documentElement.setAttribute('data-theme', id); else document.documentElement.removeAttribute('data-theme');
@@ -3475,6 +3501,11 @@
     if (id === 'fallout' && !document.getElementById('fallout-fonts')) {
       const l = document.createElement('link'); l.id = 'fallout-fonts'; l.rel = 'stylesheet';
       l.href = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap';
+      document.head.appendChild(l);
+    }
+    if (id === 'vice' && !document.getElementById('vice-fonts')) {
+      const l = document.createElement('link'); l.id = 'vice-fonts'; l.rel = 'stylesheet';
+      l.href = 'https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&display=swap';
       document.head.appendChild(l);
     }
     const t = THEMES.find(x => x.id === id);
