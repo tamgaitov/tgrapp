@@ -77,6 +77,9 @@
   .bd-h { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; background: #fff; border: 1.5px solid var(--accent); border-radius: 3px;
     pointer-events: auto; box-sizing: border-box; transform: scale(var(--iz, 1)); }
   .bd-h.nw, .bd-h.se { cursor: nwse-resize; } .bd-h.ne, .bd-h.sw { cursor: nesw-resize; }
+  .bd-rot { position: absolute; left: 50%; top: 0; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: #fff; border: 1.5px solid var(--accent);
+    box-sizing: border-box; pointer-events: auto; cursor: grab; transform: translateY(calc(-30px * var(--iz, 1))) scale(var(--iz, 1)); }
+  .bd-rot::after { content: ''; position: absolute; left: 50%; top: 100%; width: 1.5px; height: 16px; margin-left: -.75px; background: var(--accent); }
   .bd-h.n, .bd-h.s { cursor: ns-resize; } .bd-h.e, .bd-h.w { cursor: ew-resize; }
   .bd-hover { outline: 1.5px solid var(--accent); outline-offset: 2px; }
   .bd-cropghost { position: absolute; opacity: .35; pointer-events: none; z-index: 7; }
@@ -216,6 +219,7 @@
     dup: SV('<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5.5C16 4.7 15.3 4 14.5 4H5.5C4.7 4 4 4.7 4 5.5V14.5C4 15.3 4.7 16 5.5 16H8"/>'),
     front: SV('<rect x="9" y="9" width="11" height="11" rx="1.5" fill="currentColor" fill-opacity=".3"/><path d="M15 5H5V15"/>'),
     back: SV('<rect x="4" y="4" width="11" height="11" rx="1.5"/><path d="M9 19H19V9" opacity=".6"/>'),
+    rot: SV('<path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4V8.5H15.5"/>'),
     crop: SV('<path d="M6 2V18H22"/><path d="M2 6H18V22"/>'),
     sq: SV('<rect x="5" y="5" width="14" height="14"/>'),
     rnd: SV('<rect x="5" y="5" width="14" height="14" rx="4"/>'),
@@ -719,6 +723,7 @@
     else if (kind === 'image') {
       const c = s.crop || { x: 0, y: 0, w: 1, h: 1 }, im = el.firstChild;
       el.style.width = s.w + 'px'; el.style.height = s.h + 'px';
+      el.style.transform = s.rot && !(cropping && cropping.id === s.id) ? `rotate(${s.rot}deg)` : '';
       el.style.borderRadius = s.shape === 'circle' ? '50%' : s.shape === 'round' ? Math.min(s.w, s.h) * 0.12 + 'px' : '0';
       const W = s.w / c.w, H = s.h / c.h;
       Object.assign(im.style, { width: W + 'px', height: H + 'px', left: -c.x * W + 'px', top: -c.y * H + 'px' });
@@ -749,10 +754,13 @@
     const pad = 4 / cam.z;
     const box = document.createElement('div'); box.className = 'bd-selbox' + (items.length > 1 ? ' multi' : '');
     Object.assign(box.style, { left: b.x - pad + 'px', top: b.y - pad + 'px', width: b.w + pad * 2 + 'px', height: b.h + pad * 2 + 'px', borderWidth: 1.5 / cam.z + 'px' });
+    const one = items.length === 1 && items[0].s && items[0].s.type === 'image' ? items[0].s : null;
+    if (one && one.rot) box.style.transform = `rotate(${one.rot}deg)`;
+    if (one) { const r = document.createElement('div'); r.className = 'bd-rot'; r.title = 'Rotate (Shift: 15° steps)'; box.appendChild(r); }
     const canScale = items.some(it => it.s && !(it.s.type === 'arrow' && (it.s.from || it.s.to)));
     if (canScale) {
       const hs = ['nw', 'ne', 'sw', 'se'];
-      if (items.length === 1 && ['rect', 'ellipse', 'diamond', 'sticky', 'image'].includes(items[0].s && items[0].s.type)) hs.push('n', 's', 'e', 'w');
+      if (items.length === 1 && ['rect', 'ellipse', 'diamond', 'sticky', 'image'].includes(items[0].s && items[0].s.type) && !(one && one.rot)) hs.push('n', 's', 'e', 'w');
       const pos = { nw: [0, 0], n: [50, 0], ne: [100, 0], e: [100, 50], se: [100, 100], s: [50, 100], sw: [0, 100], w: [0, 50] };
       hs.forEach(h => { const d = document.createElement('div'); d.className = 'bd-h ' + h; d.dataset.h = h; d.style.left = pos[h][0] + '%'; d.style.top = pos[h][1] + '%'; box.appendChild(d); });
     }
@@ -771,6 +779,7 @@
     // live preview in the object itself
     if (el) {
       const im = el.firstChild;
+      el.style.transform = '';
       el.style.left = W.x + 'px'; el.style.top = W.y + 'px'; el.style.width = W.w + 'px'; el.style.height = W.h + 'px';
       Object.assign(im.style, { width: F.w + 'px', height: F.h + 'px', left: F.x - W.x + 'px', top: F.y - W.y + 'px' });
     }
@@ -844,6 +853,7 @@
     if (objs.length === 1 && objs[0].s.type === 'image') {
       const s = objs[0].s;
       mkBtn(ctxBar, IC.crop, 'Crop', false, () => startCrop(s));
+      mkBtn(ctxBar, IC.rot, 'Rotate 90°', false, () => patchSel({ rot: (((s.rot || 0) + 90 + 180) % 360 + 360) % 360 - 180 }, x => x.type === 'image'));
       [['sq', 'rect'], ['rnd', 'round'], ['circ', 'circle']].forEach(([ic, sh]) => mkBtn(ctxBar, IC[ic], 'Shape', (s.shape || 'rect') === sh, () => patchSel({ shape: sh }, x => x.type === 'image')));
       sepTo(ctxBar);
     }
@@ -1065,8 +1075,20 @@
         }
       }
       if (t === 'select') {
+        if (e.target.closest('.bd-rot')) {
+          const it = selItems()[0], s = it && it.s;
+          if (s && s.type === 'image') {
+            const c = { x: s.x + s.w / 2, y: s.y + s.h / 2 };
+            act = { kind: 'rotate', s, orig: strip(s), c, a0: Math.atan2(p.y - c.y, p.x - c.x), r0: s.rot || 0 }; return;
+          }
+        }
         const h = e.target.closest('.bd-h[data-h]');
-        if (h) { const b = selBounds(); act = { kind: 'scale', h: h.dataset.h, b0: b, items: snapshotSel(), sx: p.x, sy: p.y }; return; }
+        if (h) {
+          const b = selBounds(); act = { kind: 'scale', h: h.dataset.h, b0: b, items: snapshotSel(), sx: p.x, sy: p.y };
+          const s1 = act.items.length === 1 && act.items[0].s;
+          if (s1 && s1.type === 'image' && s1.rot) { act.rc = { x: s1.x + s1.w / 2, y: s1.y + s1.h / 2 }; act.rd0 = Math.max(1, Math.hypot(p.x - act.rc.x, p.y - act.rc.y)); }
+          return;
+        }
         const id = itemOf(e.target);
         if (id) {
           if (e.shiftKey) { sel.has(id) ? sel.delete(id) : sel.add(id); renderSel(); renderCtx(); act = null; return; }
@@ -1160,6 +1182,18 @@
         markDailyDrop(dd);
         frameEls.forEach((fe, id) => fe.classList.toggle('drop', id === over && over !== act.home));
       }
+      drawObjects();
+    } else if (act.kind === 'rotate') {
+      let r = act.r0 + (Math.atan2(p.y - act.c.y, p.x - act.c.x) - act.a0) * 180 / Math.PI;
+      if (e.shiftKey) r = Math.round(r / 15) * 15;
+      else { const n = Math.round(r / 90) * 90; if (Math.abs(r - n) < 4) r = n; }
+      r = ((r % 360) + 360) % 360; if (r > 180) r -= 360;
+      act.s.rot = Math.round(r * 10) / 10; act.moved = true;
+      drawObjects();
+    } else if (act.kind === 'scale' && act.rc) {    // rotated photo: scale around its center
+      const o = act.items[0].orig, k = Math.max(0.05, Math.hypot(p.x - act.rc.x, p.y - act.rc.y) / act.rd0);
+      const w = Math.max(8, o.w * k), h = Math.max(8, o.h * k);
+      Object.assign(act.items[0].s, { w, h, x: act.rc.x - w / 2, y: act.rc.y - h / 2 }); act.to = true;
       drawObjects();
     } else if (act.kind === 'scale') {
       const b = act.b0, h = act.h, dx = p.x - act.sx, dy = p.y - act.sy;
@@ -1348,6 +1382,11 @@
           }
           return;
         }
+      } else if (a.kind === 'rotate') {
+        if (a.moved) commit([{ col: 's', id: a.s.id, before: a.orig, after: { ...a.orig, rot: a.s.rot } }]);
+      } else if (a.kind === 'scale' && a.to && a.rc) {
+        const it = a.items[0], s = it.s;
+        commit([{ col: 's', id: it.id, before: it.orig, after: { ...it.orig, x: Math.round(s.x), y: Math.round(s.y), w: Math.round(s.w), h: Math.round(s.h) } }]);
       } else if (a.kind === 'scale' && a.to) {
         const ch = [];
         a.items.forEach(it => {
@@ -1390,6 +1429,8 @@
     if (!pointers.size) finish();
   }
   function cancelAct() {
+    if (act && act.kind === 'rotate') act.s.rot = act.orig.rot;
+    if (act && act.kind === 'scale' && act.rc) Object.assign(act.items[0].s, act.items[0].orig);
     if (act && act.kind === 'move') act.items.forEach(it => { if (it.s) Object.assign(it.s, it.orig); else { it.card.style.left = it.ox + 'px'; it.card.style.top = it.oy + 'px'; } });
     clearTimeout(longT); longT = null;
     act = null; live = null; marqEl.style.display = 'none'; drawObjects();
