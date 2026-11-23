@@ -234,6 +234,9 @@
   const colorOf = c => c === 'ink' || !c ? 'var(--text)' : c;
 
   // ---------- tool state ----------
+  // phones open boards in Hand mode (view only, nothing moves by accident); desktop keeps Select
+  const isPhone = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+  const defaultTool = () => isPhone ? 'hand' : 'select';
   let tool = 'select', color = 'ink';
   const opt = lsGet('tgr_board_opts', { penW: 3, markW: 16, eraserR: 12, shape: 'rect', fill: false, head: 'end', dash: false, curve: false });
   const saveOpt = () => lsSet('tgr_board_opts', opt);
@@ -387,6 +390,7 @@
     if (!CTX) return;
     if (camFor !== CTX) {
       camFor = CTX; sel.clear(); cropping = null; undoStack.length = 0; redoStack.length = 0;
+      if (isPhone && tool !== 'hand') { tool = 'hand'; board.className = 't-hand'; }
       const c = cams[CTX];
       cam = c ? { ...c } : { x: 40, y: 40, z: 1 };
       applyCam(); renderTools();
@@ -1632,6 +1636,6 @@
   }, 20000);
 
   window.__tgr = Object.assign(window.__tgr || {}, { goFBoard });
-  setTool('select');
+  setTool(defaultTool());
   renderAll();
 })();
