@@ -93,6 +93,8 @@
   .tree-row:not(.active):hover { background: var(--sidebar-hover); }
   .tree-row:not(.active):hover .row-actions { opacity: 1; }
   .tree-row.dragging { opacity: 0.35; }
+  .tree-row.sec-drag { background: var(--accent-soft); color: var(--accent); box-shadow: 0 4px 14px rgba(0,0,0,.18); cursor: grabbing; }
+  body.sec-dragging, body.sec-dragging * { user-select: none !important; -webkit-user-select: none !important; cursor: grabbing !important; }
   .tree-row.drop-before { box-shadow: inset 0 2px 0 0 var(--accent); }
   .tree-row.drop-after { box-shadow: inset 0 -2px 0 0 var(--accent); }
 
@@ -1090,6 +1092,93 @@
       sidebarListEl.appendChild(progRow);
     }
     if (window.renderExtraSidebar) window.renderExtraSidebar(sidebarListEl);
+    try { applySidebarOrder(sidebarListEl); } catch (e) { console.error(e); }
+  }
+
+  // ---- Top-level sidebar sections (ToDo, Boards, Weight, ...) can be dragged to reorder.
+  // Mouse: drag the row. Touch: hold ~0.3s, then drag. Order syncs via uiPrefs/sidebar.
+  const uiPrefsCol = SyncDB.collection('uiPrefs');
+  let sidebarOrder = [];
+  uiPrefsCol.orderBy('x', 'asc').onSnapshot(s => {
+    const d = s.docs.find(x => x.id === 'sidebar'), o = (d && d.data().order) || [];
+    if (JSON.stringify(o) !== JSON.stringify(sidebarOrder)) { sidebarOrder = o; renderTree(); }
+  });
+  const isTopRow = el => el.classList && el.classList.contains('tree-row') && el.style.paddingLeft === '6px';
+  const secKey = row => ((row.querySelector('.row-name') || {}).textContent || '').trim();
+  function sidebarSections(list) {
+    const secs = [];
+    [...list.children].forEach(el => {
+      if (isTopRow(el) || !secs.length) secs.push({ key: isTopRow(el) ? secKey(el) : '', row: isTopRow(el) ? el : null, els: [] });
+      secs[secs.length - 1].els.push(el);
+    });
+    return secs;
+  }
+  function applySidebarOrder(list) {
+    const secs = sidebarSections(list);
+    if (sidebarOrder.length) {
+      const rank = (s, i) => { const k = sidebarOrder.indexOf(s.key); return k < 0 ? 1000 + i : k; };
+      secs.map((s, i) => ({ s, r: rank(s, i) })).sort((a, b) => a.r - b.r).forEach(({ s }) => s.els.forEach(el => list.appendChild(el)));
+    }
+    secs.forEach(s => { if (s.row) bindSecDrag(list, s.row); });
+  }
+  let secDrag = null;
+  function secMove(y) {
+    const d = secDrag; if (!d || !d.row.isConnected) return;
+    const list = d.list, secs = sidebarSections(list), mine = secs.find(s => s.row === d.row);
+    if (!mine) return;
+    for (const s of secs) {
+      if (s === mine || !s.row) continue;
+      const top = s.els[0].getBoundingClientRect().top, bot = s.els[s.els.length - 1].getBoundingClientRect().bottom;
+      const r = s.row.getBoundingClientRect();
+      if (y < top || y > bot) continue;
+      const before = y < r.top + r.height / 2;
+      const anchor = before ? s.els[0] : s.els[s.els.length - 1].nextSibling;
+      if (anchor === mine.els[0]) return;
+      mine.els.forEach(el => list.insertBefore(el, anchor));
+      d.changed = true;
+      return;
+    }
+  }
+  function secStart(list, row) {
+    secDrag = { list, row, changed: false };
+    row.classList.add('sec-drag'); document.body.classList.add('sec-dragging');
+  }
+  function secEnd() {
+    const d = secDrag; secDrag = null;
+    document.body.classList.remove('sec-dragging');
+    if (!d) return;
+    d.row.classList.remove('sec-drag');
+    d.row._justDragged = Date.now();
+    if (!d.changed || !d.row.isConnected) return;
+    sidebarOrder = sidebarSections(d.list).filter(s => s.row).map(s => s.key);
+    uiPrefsCol.doc('sidebar').set({ order: sidebarOrder, x: 0 });
+  }
+  function bindSecDrag(list, row) {
+    if (row._secBound) return; row._secBound = true;
+    row.addEventListener('click', e => { if (row._justDragged && Date.now() - row._justDragged < 400) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+    row.addEventListener('mousedown', e => {
+      if (e.button !== 0 || e.target.closest('.row-more, input, textarea, button')) return;
+      const sy = e.clientY;
+      const mv = ev => {
+        if (!secDrag && Math.abs(ev.clientY - sy) > 5) secStart(list, row);
+        if (secDrag) { ev.preventDefault(); secMove(ev.clientY); }
+      };
+      const up = () => { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); secEnd(); };
+      document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
+    });
+    let timer = null, sx = 0, sy = 0;
+    row.addEventListener('touchstart', e => {
+      if (e.target.closest('.row-more, input, textarea, button')) return;
+      const t = e.touches[0]; sx = t.clientX; sy = t.clientY; clearTimeout(timer);
+      timer = setTimeout(() => { secStart(list, row); if (navigator.vibrate) navigator.vibrate(10); }, 300);
+    }, { passive: true });
+    row.addEventListener('touchmove', e => {
+      const t = e.touches[0];
+      if (secDrag && secDrag.row === row) { e.preventDefault(); secMove(t.clientY); }
+      else if (Math.hypot(t.clientX - sx, t.clientY - sy) > 10) clearTimeout(timer);
+    }, { passive: false });
+    const tend = () => { clearTimeout(timer); if (secDrag && secDrag.row === row) secEnd(); };
+    row.addEventListener('touchend', tend); row.addEventListener('touchcancel', tend);
   }
 
   rootAddBtn.addEventListener('click', () => {
