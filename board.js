@@ -111,6 +111,24 @@
   @media (max-width: 640px) { .bd-bar button { min-width: 31px; height: 31px; } .bd-bar .sw { min-width: 24px; width: 24px; } .bd-bar .sw i { width: 14px; height: 14px; }
     .bd-tools { flex-wrap: wrap; justify-content: center; width: max-content; overflow: visible; } .bd-tools .sep { display: none; } }
   .fb-list { max-width: 560px; margin: 0 auto; }
+  .bd-daily { position: absolute; border-radius: 16px; border: 1.5px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    background: color-mix(in srgb, var(--accent) 6%, transparent); color: var(--accent); box-sizing: border-box; padding: 0 10px 10px; }
+  .bd-dhead { height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 2px 0 4px; font-weight: 700; font-size: 15px; cursor: grab; white-space: nowrap; }
+  .bd-dhead .ct { font-weight: 600; font-size: 11.5px; opacity: .7; }
+  .bd-dhead .sp { flex: 1; }
+  .bd-dbtn { border: 0; background: none; color: inherit; font: inherit; font-size: 12px; font-weight: 600; padding: 5px 9px; border-radius: 8px; cursor: pointer; opacity: .8; }
+  .bd-dbtn:hover { background: rgba(127,127,127,.15); opacity: 1; }
+  .bd-dcols { display: flex; gap: 8px; align-items: flex-start; }
+  .bd-dcol { width: 228px; flex-shrink: 0; border-radius: 12px; padding: 0 4px 6px; box-sizing: border-box; min-height: 120px; background: rgba(127,127,127,.06);
+    display: flex; flex-direction: column; gap: 6px; transition: box-shadow .12s; }
+  .bd-dcol.today { background: color-mix(in srgb, var(--accent) 13%, transparent); }
+  .bd-dcol.drop { box-shadow: 0 0 0 2.5px var(--accent); }
+  .bd-dch { height: 30px; display: flex; align-items: center; gap: 6px; padding: 0 6px; font-size: 12.5px; font-weight: 700; color: var(--text-dim); }
+  .bd-dcol.today .bd-dch { color: var(--accent); }
+  .bd-dch .dt { font-weight: 500; opacity: .75; }
+  .bd-dch .n { margin-left: auto; font-weight: 600; font-size: 11px; opacity: .7; }
+  .bd-daily .bd-card { position: relative; width: 220px; cursor: grab; }
+  .bd-daily .bd-card.dragging { z-index: 20; cursor: grabbing; }
   `;
   const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
 
@@ -202,7 +220,8 @@
     sq: SV('<rect x="5" y="5" width="14" height="14"/>'),
     rnd: SV('<rect x="5" y="5" width="14" height="14" rx="4"/>'),
     circ: SV('<circle cx="12" cy="12" r="8"/>'),
-    check: SV('<path d="M5 12.5L10 17L19 7"/>')
+    check: SV('<path d="M5 12.5L10 17L19 7"/>'),
+    cal: SV('<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10H20.5M8 3V7M16 3V7"/>')
   };
   const COLORS = ['ink', '#e03e3e', '#e0823e', '#e8b800', '#2fa36b', '#1d6fe0', '#8a4fd8', '#ffffff'];
   const STICKY_COLORS = ['#fff1a8', '#ffd6a5', '#ffc4d6', '#c8f0c8', '#c5e3ff', '#e2d4ff'];
@@ -369,8 +388,11 @@
       applyCam(); renderTools();
       if (!c) setTimeout(() => fit(true), 0);
     }
-    const tasks = scopeTasks().filter(t => !t.done || showDone || recentDone.has(t.id));
+    const scope = scopeTasks();
+    const inDaily = new Set(isFolderCtx() && cardPos[dailyKey()] ? dailyAssigns().map(a => a.dl) : []);
+    const tasks = scope.filter(t => !t.done || showDone || recentDone.has(t.id) || inDaily.has(t.id));
     renderFrames(tasks);
+    renderDaily(scope);
     const seen = new Set(), unplaced = [];
     tasks.forEach(t => {
       seen.add(t.id);
@@ -459,6 +481,7 @@
   }
   function placeFrames(tasks) {
     const rects = [...cardsEl.children].filter(el => el.style.visibility !== 'hidden').map(rectOf).concat([...frameEls.values()].filter(el => el._placed).map(rectOf));
+    if (dailyEl && dailyEl.isConnected) rects.push(rectOf(dailyEl));
     const hit = r => rects.some(o => inter(r, o, 30));
     childFolders().forEach(f => {
       const el = frameEls.get(f.id);
@@ -507,6 +530,7 @@
     const GW = 240, GH = 120, COLS = board.clientWidth && board.clientWidth < 700 ? 2 : 4;
     const rects = [...cardsEl.children].filter(el => el.style.visibility !== 'hidden').map(rectOf);
     const frameRects = [...frameEls.values()].filter(el => el._placed).map(rectOf);
+    if (dailyEl && dailyEl.isConnected) frameRects.push(rectOf(dailyEl));
     const hit = r => rects.some(o => inter(r, o, 12));
     list.forEach(({ t, el }) => {
       const h = el.offsetHeight || 60;
@@ -526,6 +550,106 @@
       cardPos[cardKey(t.id)] = { x: pos.x, y: pos.y };
       cardsCol.doc(cardKey(t.id)).set({ folderId: CTX, taskId: t.id, x: pos.x, y: pos.y });
     });
+  }
+
+  // ----- Daily: a week area (Mon..Sun). Cards dropped in are mirrored there, the task stays where it was. -----
+  // Area: boardCards doc ctx__daily {x, y}. Day slots: ctx__dl_<taskId> {dl: taskId, day: 0..6, order}.
+  const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const dailyKey = () => cardKey('daily');
+  const slotKey = tid => cardKey('dl_' + tid);
+  const mirrorEls = new Map();
+  let dailyEl = null;
+  function dailyAssigns() {
+    const out = [];
+    for (const k in cardPos) { const p = cardPos[k]; if (p && p.dl && p.folderId === CTX) out.push(p); }
+    return out.sort((a, b) => (a.order || 0) - (b.order || 0));
+  }
+  function buildDaily() {
+    const el = document.createElement('div'); el.className = 'bd-daily';
+    el.innerHTML = '<div class="bd-dhead">' + IC.cal + '<span>Daily</span><span class="ct"></span><span class="sp"></span>' +
+      '<button class="bd-dbtn" data-a="clear" title="Remove done tasks from the week">Clear done</button></div><div class="bd-dcols"></div>';
+    el.querySelector('[data-a="clear"]').addEventListener('click', e => { e.stopPropagation(); clearDoneDaily(); });
+    const cols = el.querySelector('.bd-dcols');
+    DAYS.forEach((d, i) => { const c = document.createElement('div'); c.className = 'bd-dcol'; c.dataset.day = i; c.innerHTML = '<div class="bd-dch"><span>' + d + '</span><span class="dt"></span><span class="n"></span></div>'; cols.appendChild(c); });
+    return el;
+  }
+  function renderDaily(scope) {
+    const dp = isFolderCtx() && cardPos[dailyKey()];
+    if (!dp) { if (dailyEl) dailyEl.remove(); mirrorEls.forEach(m => m.remove()); mirrorEls.clear(); return; }
+    if (!dailyEl) dailyEl = buildDaily();
+    if (dailyEl.parentNode !== framesEl) framesEl.appendChild(dailyEl);
+    dailyEl.style.left = dp.x + 'px'; dailyEl.style.top = dp.y + 'px';
+    const now = new Date(), ti = (now.getDay() + 6) % 7;
+    const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ti);
+    const byId = new Map(scope.map(t => [t.id, t])), cols = DAYS.map(() => []);
+    dailyAssigns().forEach(a => { const t = byId.get(a.dl); if (t) cols[Math.min(6, Math.max(0, a.day || 0))].push(t); });
+    const seen = new Set();
+    let open = 0;
+    dailyEl.querySelectorAll('.bd-dcol').forEach((c, i) => {
+      c.classList.toggle('today', i === ti);
+      c.querySelector('.dt').textContent = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + i).getDate();
+      const left = cols[i].filter(t => !t.done).length; open += left;
+      c.querySelector('.n').textContent = cols[i].length ? (left ? left : '✓') : '';
+      cols[i].forEach(t => {
+        seen.add(t.id);
+        let m = mirrorEls.get(t.id);
+        if (!m) { m = document.createElement('div'); m.className = 'bd-card'; m.dataset.tid = t.id; m.dataset.mirror = '1'; mirrorEls.set(t.id, m); }
+        c.appendChild(m);       // keeps the order
+        fillCard(m, t);
+      });
+    });
+    for (const [id, m] of mirrorEls) if (!seen.has(id)) { m.remove(); mirrorEls.delete(id); }
+    dailyEl.querySelector('.ct').textContent = open || '';
+    dailyEl.querySelector('[data-a="clear"]').style.display = cols.some(l => l.some(t => t.done)) ? '' : 'none';
+  }
+  function dailyHit(x, y) {
+    if (!dailyEl || !dailyEl.isConnected) return -1;
+    const r = rectOf(dailyEl);
+    if (x < r.x || x > r.x + r.w || y < r.y || y > r.y + r.h) return -1;
+    const cols = [...dailyEl.querySelectorAll('.bd-dcol')];
+    for (let i = 0; i < cols.length; i++) if (x < r.x + cols[i].offsetLeft + cols[i].offsetWidth + 4) return i;
+    return cols.length - 1;
+  }
+  function markDailyDrop(day) { if (dailyEl) dailyEl.querySelectorAll('.bd-dcol').forEach((c, i) => c.classList.toggle('drop', i === day)); }
+  function dropToDaily(tid, day, y) {
+    const r = rectOf(dailyEl);
+    const list = dailyAssigns().filter(a => (a.day || 0) === day && a.dl !== tid);
+    let idx = list.findIndex(a => { const m = mirrorEls.get(a.dl); return m && m.isConnected && r.y + m.offsetTop + m.offsetHeight / 2 > y; });
+    if (idx < 0) idx = list.length;
+    list.splice(idx, 0, { dl: tid });
+    const ch = [];
+    list.forEach((a, i) => {
+      const key = slotKey(a.dl), before = cardPos[key] ? { ...cardPos[key] } : null;
+      if (before && before.day === day && before.order === i) return;
+      const after = { folderId: CTX, dl: a.dl, day, order: i, x: 0 };
+      cardPos[key] = after; ch.push({ col: 'c', id: key, before, after });
+    });
+    commit(ch);
+  }
+  function removeFromDaily(tids) {
+    const ch = tids.map(tid => { const key = slotKey(tid), before = cardPos[key]; delete cardPos[key]; return before && { col: 'c', id: key, before: { ...before }, after: null }; }).filter(Boolean);
+    commit(ch);
+  }
+  function clearDoneDaily() {
+    const done = new Set(allTasks.filter(t => t.done).map(t => t.id));
+    removeFromDaily(dailyAssigns().filter(a => done.has(a.dl)).map(a => a.dl));
+    draw();
+  }
+  function toggleDaily() {
+    const key = dailyKey(), dp = cardPos[key];
+    if (dp) {
+      if (!confirm('Remove the Daily area? Tasks stay on the board.')) return;
+      const ch = dailyAssigns().map(a => { const k = slotKey(a.dl), b = { ...a }; delete cardPos[k]; return { col: 'c', id: k, before: b, after: null }; });
+      delete cardPos[key]; ch.push({ col: 'c', id: key, before: { ...dp }, after: null });
+      commit(ch);
+    } else {
+      const rs = [...cardsEl.children].filter(el => el.style.visibility !== 'hidden').map(rectOf).concat([...frameEls.values()].filter(el => el._placed).map(rectOf));
+      const x = rs.length ? Math.min(...rs.map(r => r.x)) : 0, y = rs.length ? Math.max(...rs.map(r => r.y + r.h)) + 60 : 0;
+      const after = { folderId: CTX, daily: true, x: Math.round(x), y: Math.round(y) };
+      cardPos[key] = after; commit([{ col: 'c', id: key, before: null, after }]);
+    }
+    draw(); renderTools();
+    if (!dp) setTimeout(() => fit(), 0);
   }
 
   // ----- objects -----
@@ -686,6 +810,7 @@
     sepTo(toolsEl);
     mkBtn(toolsEl, IC.undo, 'Undo (Ctrl+Z)', false, undo).disabled = !undoStack.length;
     mkBtn(toolsEl, IC.redo, 'Redo (Ctrl+Shift+Z)', false, redo).disabled = !redoStack.length;
+    if (isFolderCtx() && CTX) mkBtn(toolsEl, IC.cal, cardPos[dailyKey()] ? 'Remove Daily area' : 'Add Daily area (Mon-Sun)', !!cardPos[dailyKey()], toggleDaily);
     if (isFolderCtx()) mkBtn(toolsEl, IC.done, showDone ? 'Hide done tasks' : 'Show done tasks', showDone, () => { showDone = !showDone; lsSet('tgr_board_showdone', showDone); draw(); renderTools(); });
     mkBtn(toolsEl, IC.fit, 'Fit everything', false, () => fit());
     renderOpts();
@@ -889,7 +1014,7 @@
       : { id: it.id, s: it.s, orig: strip(it.s), box: boxOf(it.s) });
   }
   board.addEventListener('pointerdown', e => {
-    if (e.target.closest('.bd-bar, .bd-zoom, .inline-edit, [contenteditable="true"], .bd-fadd, .bd-finput')) return;
+    if (e.target.closest('.bd-bar, .bd-zoom, .inline-edit, [contenteditable="true"], .bd-fadd, .bd-finput, .bd-dbtn')) return;
     if (e.button && e.button !== 0 && e.button !== 1) return;
     if (editing) { editing.blur(); e.preventDefault(); return; }
     if (document.activeElement && document.activeElement !== document.body && !board.contains(document.activeElement)) document.activeElement.blur();
@@ -911,6 +1036,18 @@
       if (ch) { act = { kind: 'cropH', h: ch.dataset.ch, sx: p.x, sy: p.y, W0: { ...cropping.W } }; return; }
       if (e.target.closest('.bd-cropbox')) { act = { kind: 'cropPan', sx: p.x, sy: p.y, F0: { ...cropping.F } }; return; }
       endCrop(true); interacting = false; act = null; return;
+    }
+    if (t === 'select') {
+      const mir = e.target.closest('.bd-daily .bd-card');
+      if (mir) {
+        if (e.target.closest('.bd-check')) { act = { kind: 'check', card: mir }; return; }
+        sel.clear(); renderSel(); renderCtx();
+        act = { kind: 'dmove', el: mir, tid: mir.dataset.tid, sx: p.x, sy: p.y, moved: false }; return;
+      }
+      if (e.target.closest('.bd-dhead') && cardPos[dailyKey()]) {
+        sel.clear(); renderSel(); renderCtx();
+        act = { kind: 'dframe', sx: p.x, sy: p.y, dp: { ...cardPos[dailyKey()] }, moved: false }; return;
+      }
     }
     if (t === 'select' || t === 'hand') {
       const card = e.target.closest('.bd-card');
@@ -1018,7 +1155,9 @@
         else Object.assign(it.s, moveData(it.orig, dx, dy));
       });
       if (act.card) {
-        const c = act.card, over = frameAt(c.offsetLeft + c.offsetWidth / 2, c.offsetTop + c.offsetHeight / 2);
+        const c = act.card, cx = c.offsetLeft + c.offsetWidth / 2, cy = c.offsetTop + c.offsetHeight / 2;
+        const dd = act.items.length === 1 ? dailyHit(cx, cy) : -1, over = dd < 0 ? frameAt(cx, cy) : null;
+        markDailyDrop(dd);
         frameEls.forEach((fe, id) => fe.classList.toggle('drop', id === over && over !== act.home));
       }
       drawObjects();
@@ -1073,6 +1212,17 @@
       act.fel.style.left = (act.fp.x + dx) + 'px'; act.fel.style.top = (act.fp.y + dy) + 'px';
       act.members.forEach(m => { m.el.style.left = (m.ox + dx) + 'px'; m.el.style.top = (m.oy + dy) + 'px'; });
       drawObjects();
+    } else if (act.kind === 'dmove') {
+      const dx = p.x - act.sx, dy = p.y - act.sy;
+      if (!act.moved && Math.hypot(dx, dy) * cam.z < 4) return;
+      act.moved = true;
+      act.el.classList.add('dragging'); act.el.style.transform = `translate(${dx}px, ${dy}px)`;
+      markDailyDrop(dailyHit(p.x, p.y));
+    } else if (act.kind === 'dframe') {
+      const dx = Math.round(p.x - act.sx), dy = Math.round(p.y - act.sy);
+      if (!act.moved && Math.hypot(dx, dy) * cam.z < 4) return;
+      act.moved = true; act.dx = dx; act.dy = dy;
+      dailyEl.style.left = (act.dp.x + dx) + 'px'; dailyEl.style.top = (act.dp.y + dy) + 'px';
     } else if (act.kind === 'fresize') {
       act.w = Math.max(240, Math.round(act.ow + p.x - act.sx)); act.h = Math.max(110, Math.round(act.oh + p.y - act.sy));
       act.fel.style.width = act.w + 'px'; act.fel.style.height = act.h + 'px';
@@ -1145,11 +1295,27 @@
     board.classList.remove('panning'); marqEl.style.display = 'none';
     frameEls.forEach(fe => fe.classList.remove('drop'));
     cardEls.forEach(c => c.classList.remove('dragging'));
+    markDailyDrop(-1);
+    if (a && a.kind === 'dmove') { a.el.classList.remove('dragging'); a.el.style.transform = ''; }
+    if (a && a.kind === 'dframe' && e.type !== 'pointerup') { const dp = cardPos[dailyKey()]; if (dp && dailyEl) { dailyEl.style.left = dp.x + 'px'; dailyEl.style.top = dp.y + 'px'; } }
     if (a && e.type === 'pointerup') {
       const p = toWorld(e);
       if (a.kind === 'check') {
         const t = allTasks.find(x => x.id === a.card.dataset.tid);
         if (t) { if (!t.done) recentDone.add(t.id); toggleTask(t); }
+      } else if (a.kind === 'dmove') {
+        if (a.moved) { const d = dailyHit(p.x, p.y); if (d >= 0) dropToDaily(a.tid, d, p.y); else removeFromDaily([a.tid]); drawPending = true; }
+      } else if (a.kind === 'dframe') {
+        if (a.moved) {
+          const key = dailyKey(), np = { ...a.dp, x: a.dp.x + a.dx, y: a.dp.y + a.dy };
+          cardPos[key] = np; commit([{ col: 'c', id: key, before: a.dp, after: np }]);
+        }
+      } else if (a.kind === 'move' && a.moved && a.card && a.items.length === 1 &&
+        dailyHit(a.card.offsetLeft + a.card.offsetWidth / 2, a.card.offsetTop + a.card.offsetHeight / 2) >= 0) {
+        // dropped into Daily: the card goes back to its spot, a copy lands in that day
+        const c = a.card, it = a.items[0], d = dailyHit(c.offsetLeft + c.offsetWidth / 2, c.offsetTop + c.offsetHeight / 2);
+        c.style.left = it.ox + 'px'; c.style.top = it.oy + 'px';
+        dropToDaily(it.tid, d, p.y); drawPending = true;
       } else if (a.kind === 'move') {
         if (a.moved) {
           const ch = [];
