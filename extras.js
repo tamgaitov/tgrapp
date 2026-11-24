@@ -3513,7 +3513,7 @@
   }
   applyTheme((() => { try { return localStorage.getItem('tgr_theme'); } catch (e) { return null; } })());
 
-  const APP_VERSION = '29';
+  const APP_VERSION = '30';
   async function checkForUpdates(btn, msg) {
     btn.disabled = true; btn.textContent = 'Checking...';
     try {
@@ -3532,6 +3532,27 @@
     btn.textContent = 'Reloading...';
     location.reload();
   }
+  // Auto refresh: every 10 min do the same as "Check for updates". Waits while you are typing,
+  // skips when offline, and catches up when the app comes back to the foreground.
+  (function autoUpdate() {
+    const EVERY = 10 * 60 * 1000, started = Date.now();
+    const editing = () => { const a = document.activeElement; return !!a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)); };
+    let busy = false;
+    async function run() {
+      if (busy || Date.now() - started < EVERY || editing() || !navigator.onLine) return;
+      busy = true;
+      try {
+        const r = await fetch('./index.html?check=' + Date.now(), { cache: 'no-store' });
+        if (!r.ok) throw new Error();
+        const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
+        if (reg) await reg.update().catch(() => {});
+        if (window.caches) { const keys = await caches.keys(); await Promise.all(keys.map(k => caches.delete(k))); }
+      } catch (e) { busy = false; return; }
+      location.reload();
+    }
+    setInterval(run, 30 * 1000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) run(); });
+  })();
   const BG_KEY = 'tgr_bg_img', BG_OP_KEY = 'tgr_bg_op';
   function applyBg() {
     let img = null, op = 0.16;
